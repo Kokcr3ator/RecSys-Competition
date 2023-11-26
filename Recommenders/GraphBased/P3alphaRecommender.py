@@ -31,6 +31,8 @@ class P3alphaRecommender(BaseItemSimilarityMatrixRecommender):
         return "P3alpha(alpha={}, min_rating={}, topk={}, implicit={}, normalize_similarity={})".format(self.alpha,
                                                                             self.min_rating, self.topK, self.implicit,
                                                                             self.normalize_similarity)
+    def set_similarity_matrix(self,similarity_matrix):
+        self.W_sparse = similarity_matrix
 
     def fit(self, topK=100, alpha=1., min_rating=0, implicit=False, normalize_similarity=False):
 
