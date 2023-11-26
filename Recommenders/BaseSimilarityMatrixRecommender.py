@@ -8,6 +8,8 @@ Created on 16/09/2017
 
 from Recommenders.BaseRecommender import BaseRecommender
 from Recommenders.DataIO import DataIO
+from Recommenders.NonPersonalizedRecommender import TopPop
+
 import numpy as np
 
 
@@ -88,6 +90,11 @@ class BaseItemSimilarityMatrixRecommender(BaseSimilarityMatrixRecommender):
             item_scores[:, items_to_compute] = item_scores_all[:, items_to_compute]
         else:
             item_scores = user_profile_array.dot(self.W_sparse).toarray()
+        
+        # TopPopRec = TopPop(self.URM_train)
+        # TopPopRec.fit()
+        # item_scores2 = TopPopRec._compute_item_score(user_id_array = user_id_array, items_to_compute=None)
+        # item_scores += item_scores2
 
         return item_scores
 

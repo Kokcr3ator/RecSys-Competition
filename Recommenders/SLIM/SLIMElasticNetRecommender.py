@@ -38,7 +38,10 @@ class SLIMElasticNetRecommender(BaseItemSimilarityMatrixRecommender):
     RECOMMENDER_NAME = "SLIMElasticNetRecommender"
 
     def __init__(self, URM_train, verbose = True):
-        super(SLIMElasticNetRecommender, self).__init__(URM_train, verbose = verbose)
+        super(SLIMElasticNetRecommender, self).__init__(URM_train, verbose=verbose)
+    
+    def set_similarity_matrix(self,similarity_matrix):
+        self.W_sparse = similarity_matrix
 
     @ignore_warnings(category=ConvergenceWarning)
     def fit(self, l1_ratio=0.1, alpha = 1.0, positive_only=True, topK = 100):
