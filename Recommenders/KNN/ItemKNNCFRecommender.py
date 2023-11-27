@@ -27,6 +27,10 @@ class ItemKNNCFRecommender(BaseItemSimilarityMatrixRecommender):
     def __init__(self, URM_train, verbose = True):
         super(ItemKNNCFRecommender, self).__init__(URM_train, verbose = verbose)
 
+        
+    def set_similarity_matrix(self,similarity_matrix):
+        self.W_sparse = similarity_matrix
+
 
     def fit(self, topK=50, shrink=100, similarity='cosine', normalize=True, feature_weighting = "none", URM_bias = False, **similarity_args):
 
