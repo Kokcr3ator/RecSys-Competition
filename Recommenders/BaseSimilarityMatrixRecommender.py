@@ -25,6 +25,7 @@ class BaseSimilarityMatrixRecommender(BaseRecommender):
 
         self._URM_train_format_checked = False
         self._W_sparse_format_checked = False
+        self.gamma = 0
 
 
 
@@ -90,11 +91,28 @@ class BaseItemSimilarityMatrixRecommender(BaseSimilarityMatrixRecommender):
             item_scores[:, items_to_compute] = item_scores_all[:, items_to_compute]
         else:
             item_scores = user_profile_array.dot(self.W_sparse).toarray()
+
+        item_popularity = np.ediff1d(self.URM_train.tocsc().indptr)
+        popular_items = np.argsort(item_popularity)
+        popular_items = np.flip(popular_items, axis = 0)
+
+        n_items = self.URM_train.shape[1]
         
-        # TopPopRec = TopPop(self.URM_train)
-        # TopPopRec.fit()
-        # item_scores2 = TopPopRec._compute_item_score(user_id_array = user_id_array, items_to_compute=None)
-        # item_scores += item_scores2
+        # positions will contain the vector (1,2,3,...) where 1 corresponds to the most popular item
+
+        positions = np.arange(n_items)
+        positions +=1
+
+        # Dictionary to associate the position to the item_id
+
+        map_index_position = {popular_items[i]:positions[i] for i in range(len(positions))}
+
+        # Function used to compute this column-wise operation : score = score + gamma*(n_items - position)/ n_items
+
+        def popularity_add(column, index):
+            return column + self.gamma*((n_items - map_index_position[index] )/(n_items)) 
+        
+        item_scores = np.array([popularity_add(item_scores[:, i], i) for i in range(n_items)]).T
 
         return item_scores
 
