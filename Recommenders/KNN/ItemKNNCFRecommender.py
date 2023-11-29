@@ -34,9 +34,9 @@ class ItemKNNCFRecommender(BaseItemSimilarityMatrixRecommender):
     def get_similarity_matrix(self):
         return self.W_sparse
 
-    def fit(self, gamma = 0,  topK=50, shrink=100, similarity='cosine', normalize=True, feature_weighting = "none", URM_bias = False, **similarity_args):
+    def fit(self,  topK=50, shrink=100, similarity='cosine', normalize=True, feature_weighting = "none", URM_bias = False, **similarity_args):
 
-        self.gamma = gamma
+
         self.topK = topK
         self.shrink = shrink
 
