@@ -15,12 +15,9 @@ class BaseRecommender(object):
 
     RECOMMENDER_NAME = "Recommender_Base_Class"
 
-    def __init__(self, URM_train, verbose=True, merge_topPop= False, topPop_factor= 1e-6):
+    def __init__(self, URM_train, verbose=True):
 
         super(BaseRecommender, self).__init__()
-        self.merge_topPop = merge_topPop
-        self.topPop_factor = topPop_factor
-
         self.URM_train = check_matrix(URM_train.copy(), 'csr', dtype=np.float32)
         self.URM_train.eliminate_zeros()
 
