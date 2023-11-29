@@ -21,7 +21,7 @@ class BaseSimilarityMatrixRecommender(BaseRecommender):
     """
 
     def __init__(self, URM_train, verbose=True, merge_topPop= False, topPop_factor= 1e-6):
-        super(BaseSimilarityMatrixRecommender, self).__init__(URM_train, verbose = verbose)
+        super(BaseSimilarityMatrixRecommender, self).__init__(URM_train, verbose = verbose,  merge_topPop= merge_topPop, topPop_factor= topPop_factor)
 
         self._URM_train_format_checked = False
         self._W_sparse_format_checked = False
