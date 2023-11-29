@@ -28,6 +28,11 @@ class RP3betaRecommender(BaseItemSimilarityMatrixRecommender):
         return "RP3beta(alpha={}, beta={}, min_rating={}, topk={}, implicit={}, normalize_similarity={})".format(self.alpha,
                                                                                         self.beta, self.min_rating, self.topK,
                                                                                         self.implicit, self.normalize_similarity)
+    def get_similarity_matrix(self):
+        return self.W_sparse
+    
+    def set_similarity_matrix(self, W_sparse):
+        self.W_sparse = W_sparse
 
     def fit(self, alpha=1., beta=0.6, min_rating=0, topK=100, implicit=False, normalize_similarity=True):
 
