@@ -23,8 +23,8 @@ class UserKNNCFRecommender(BaseUserSimilarityMatrixRecommender):
     FEATURE_WEIGHTING_VALUES = ["BM25", "TF-IDF", "none"]
 
 
-    def __init__(self, URM_train, verbose = True):
-        super(UserKNNCFRecommender, self).__init__(URM_train, verbose = verbose)
+    def __init__(self, URM_train, verbose = True,  merge_topPop= False, topPop_factor= 1e-6):
+        super(UserKNNCFRecommender, self).__init__(URM_train, verbose = verbose,  merge_topPop= merge_topPop, topPop_factor= topPop_factor)
 
 
     def fit(self, topK=50, shrink=100, similarity='cosine', normalize=True, feature_weighting = "none", URM_bias = False, **similarity_args):
