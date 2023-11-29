@@ -141,5 +141,21 @@ class BaseUserSimilarityMatrixRecommender(BaseSimilarityMatrixRecommender):
             item_scores[:, items_to_compute] = item_scores_all[:, items_to_compute]
         else:
             item_scores = user_weights_array.dot(self.URM_train).toarray()
+    
+            if self.merge_topPop:
+            n_items = self.URM_train.shape[1]
+            
+            # positions array is a vector containing the positions (from 1 to n_items)
+            positions = np.arange(n_items)
+            positions +=1
+
+            # Create mapping to associate the position to the item_id
+            map_index_position = {self.popular_items[i]:positions[i] for i in range(len(positions))}
+        
+            # Apply the column-wise operation : score = score + topPop_factor*(n_items - position)/ n_items
+            def popularity_add(column, index):
+                return column + self.topPop_factor*((n_items - map_index_position[index] )/(n_items)) 
+            
+            item_scores = np.array([popularity_add(item_scores[:, i], i) for i in range(n_items)]).T
 
         return item_scores
