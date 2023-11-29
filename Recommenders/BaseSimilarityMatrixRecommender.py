@@ -20,12 +20,18 @@ class BaseSimilarityMatrixRecommender(BaseRecommender):
     bot for user-based and Item-based models as well as a function to save the W_matrix
     """
 
-    def __init__(self, URM_train, verbose=True):
+    def __init__(self, URM_train, verbose=True, merge_topPop= False, topPop_factor= 1e-6):
         super(BaseSimilarityMatrixRecommender, self).__init__(URM_train, verbose = verbose)
 
         self._URM_train_format_checked = False
         self._W_sparse_format_checked = False
-        self.gamma = 0
+
+        # These parameters allow to utilize TopPopRecommender for filling in zero ratings, when you don't have enough
+        # recommendations
+        self.topPop_factor = 0.0
+        if merge_topPop:
+            self.topPop_factor = topPop_factor
+        
         item_popularity = np.ediff1d(self.URM_train.tocsc().indptr)
         popular_items = np.argsort(item_popularity)
         popular_items = np.flip(popular_items, axis = 0)
@@ -95,26 +101,22 @@ class BaseItemSimilarityMatrixRecommender(BaseSimilarityMatrixRecommender):
             item_scores[:, items_to_compute] = item_scores_all[:, items_to_compute]
         else:
             item_scores = user_profile_array.dot(self.W_sparse).toarray()
+    
+        if self.merge_topPop:
+            n_items = self.URM_train.shape[1]
+            
+            # positions array is a vector containing the positions (from 1 to n_items)
+            positions = np.arange(n_items)
+            positions +=1
+
+            # Create mapping to associate the position to the item_id
+            map_index_position = {self.popular_items[i]:positions[i] for i in range(len(positions))}
         
-
-
-        n_items = self.URM_train.shape[1]
-        
-        # positions will contain the vector (1,2,3,...) where 1 corresponds to the most popular item
-
-        positions = np.arange(n_items)
-        positions +=1
-
-        # Dictionary to associate the position to the item_id
-
-        map_index_position = {self.popular_items[i]:positions[i] for i in range(len(positions))}
-
-        # Function used to compute this column-wise operation : score = score + gamma*(n_items - position)/ n_items
-
-        def popularity_add(column, index):
-            return column + self.gamma*((n_items - map_index_position[index] )/(n_items)) 
-        
-        item_scores = np.array([popularity_add(item_scores[:, i], i) for i in range(n_items)]).T
+            # Apply the column-wise operation : score = score + topPop_factor*(n_items - position)/ n_items
+            def popularity_add(column, index):
+                return column + self.topPop_factor*((n_items - map_index_position[index] )/(n_items)) 
+            
+            item_scores = np.array([popularity_add(item_scores[:, i], i) for i in range(n_items)]).T
 
         return item_scores
 
