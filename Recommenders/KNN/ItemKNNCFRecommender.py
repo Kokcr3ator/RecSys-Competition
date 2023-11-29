@@ -24,8 +24,8 @@ class ItemKNNCFRecommender(BaseItemSimilarityMatrixRecommender):
 
 
 
-    def __init__(self, URM_train, verbose = True):
-        super(ItemKNNCFRecommender, self).__init__(URM_train, verbose = verbose)
+    # def __init__(self, URM_train, verbose = True):
+    #     super(ItemKNNCFRecommender, self).__init__(URM_train, verbose = verbose)
 
         
     def set_similarity_matrix(self,similarity_matrix):
