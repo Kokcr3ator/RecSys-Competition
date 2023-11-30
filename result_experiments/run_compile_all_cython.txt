@@ -1,0 +1,12 @@
+Compiling [1/10]: MatrixFactorizationImpressions_Cython_Epoch.pyx... PASS
+Compiling [2/10]: MatrixFactorization_Cython_Epoch.pyx... PASS
+Compiling [3/10]: Compute_Similarity_Cython.pyx... PASS
+Compiling [4/10]: SLIM_BPR_Cython_Epoch.pyx... FAIL: Command 'c:\Users\melan\AppData\Local\Programs\Python\Python311\python.exe c:\Users\melan\shared-folder\RecSys\RecSys-Competition/CythonCompiler/compile_script.py SLIM_BPR_Cython_Epoch.pyx build_ext --inplace' returned non-zero exit status 1.
+Compiling [5/10]: Sparse_Matrix_Tree_CSR.pyx... FAIL: Command 'c:\Users\melan\AppData\Local\Programs\Python\Python311\python.exe c:\Users\melan\shared-folder\RecSys\RecSys-Competition/CythonCompiler/compile_script.py Sparse_Matrix_Tree_CSR.pyx build_ext --inplace' returned non-zero exit status 1.
+Compiling [6/10]: Triangular_Matrix.pyx... PASS
+Compiling [7/10]: CFW_DVV_Similarity_Cython_SGD.pyx... PASS
+Compiling [8/10]: CFW_D_Similarity_Cython_SGD.pyx... PASS
+Compiling [9/10]: FBSM_Rating_Cython_SGD.pyx... PASS
+Compiling [10/10]: HP3_Similarity_Cython_SGD.pyx... PASS
+run_compile_all_cython: Compilation finished. FAILS 2/10.
+Compilation log can be found here: './result_experiments/run_compile_all_cython.txt'
