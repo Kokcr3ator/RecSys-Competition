@@ -18,10 +18,18 @@ class LinearCombination(BaseRecommender):
             self.weights_list = [1/self.n_recommenders] * self.n_recommenders # uniform weights if not specified
         else: self.weights_list = weights_list
 
-    def fit(self):
+    def fit(self, merge_topPop= False, topPop_factor= 1e-6):
         '''
             Fit each of the Recommender objects in the ensamble by calling fit() method for each of them.
         '''
+        self.merge_topPop = merge_topPop
+
+        # These parameters allow to utilize TopPopRecommender for filling in zero ratings, when you don't have enough
+        # recommendations
+        if self.merge_topPop:
+            self.topPop_factor = topPop_factor
+
+
         for recommender in range(len(self.recommenders_list)):
             hyperparams = self.hyperparameters_dicts_list[recommender]
             recommender_object = self.recommenders_list[recommender]
@@ -56,6 +64,22 @@ class LinearCombination(BaseRecommender):
 
         # Now compute the ensamble scores by calculating a weighted average over the scores of each Recommender
         scores_batch = np.average(scores_batch_array, axis= 0, weights= self.weights_list)
+
+        if self.merge_topPop:
+            n_items = self.URM_train.shape[1]
+                
+            # positions array is a vector containing the positions (from 1 to n_items)
+            positions = np.arange(n_items)
+            positions +=1
+
+            # Create mapping to associate the position to the item_id
+            map_index_position = {self.popular_items[i]:positions[i] for i in range(len(positions))}
+            
+            # Apply the column-wise operation : score = score + topPop_factor*(n_items - position)/ n_items
+            def popularity_add(column, index):
+                return column + self.topPop_factor*((n_items - map_index_position[index] )/(n_items)) 
+                
+            scores_batch = np.array([popularity_add(scores_batch[:, i], i) for i in range(n_items)]).T
 
         for user_index in range(len(user_id_array)):
 
