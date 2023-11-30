@@ -67,6 +67,11 @@ class LinearCombination(BaseRecommender):
 
         if self.merge_topPop:
             n_items = self.URM_train.shape[1]
+
+            # Compute TopPop
+            item_popularity = np.ediff1d(self.URM_train.tocsc().indptr)
+            popular_items = np.argsort(item_popularity)
+            popular_items = np.flip(popular_items, axis = 0)
                 
             # positions array is a vector containing the positions (from 1 to n_items)
             positions = np.arange(n_items)
