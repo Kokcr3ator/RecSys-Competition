@@ -78,7 +78,7 @@ class LinearCombination(BaseRecommender):
             positions +=1
 
             # Create mapping to associate the position to the item_id
-            map_index_position = {self.popular_items[i]:positions[i] for i in range(len(positions))}
+            map_index_position = {popular_items[i]:positions[i] for i in range(len(positions))}
             
             # Apply the column-wise operation : score = score + topPop_factor*(n_items - position)/ n_items
             def popularity_add(column, index):
