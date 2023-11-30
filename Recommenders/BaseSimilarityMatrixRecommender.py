@@ -20,23 +20,28 @@ class BaseSimilarityMatrixRecommender(BaseRecommender):
     bot for user-based and Item-based models as well as a function to save the W_matrix
     """
 
-    def __init__(self, URM_train, verbose=True, merge_topPop= False, topPop_factor= 1e-6):
+    def __init__(self, URM_train, verbose=True):
         super(BaseSimilarityMatrixRecommender, self).__init__(URM_train, verbose = verbose)
-        self.merge_topPop = merge_topPop
+
+        self.topPop_factor = 0.0
 
         self._URM_train_format_checked = False
         self._W_sparse_format_checked = False
-
-        # These parameters allow to utilize TopPopRecommender for filling in zero ratings, when you don't have enough
-        # recommendations
-        self.topPop_factor = 0.0
-        if self.merge_topPop:
-            self.topPop_factor = topPop_factor
         
         item_popularity = np.ediff1d(self.URM_train.tocsc().indptr)
         popular_items = np.argsort(item_popularity)
         popular_items = np.flip(popular_items, axis = 0)
         self.popular_items = popular_items
+
+
+
+    def fit(self, merge_topPop= False, topPop_factor= 1e-6):
+        self.merge_topPop = merge_topPop
+
+        # These parameters allow to utilize TopPopRecommender for filling in zero ratings, when you don't have enough
+        # recommendations
+        if self.merge_topPop:
+            self.topPop_factor = topPop_factor
 
 
 
