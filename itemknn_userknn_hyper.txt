@@ -1,0 +1,2 @@
+{'merge_topPop': 'True', 'topPop_factor': 0.004402997536537422, 'similarity': 'tversky', 'feature_weighting': 'TF-IDF', 'topK': 23, 'shrink': 14, 'tversky_alpha': 0.15897114516548666, 'tversky_beta': 1.9368574349052465}
+{'merge_topPop': 'False', 'topPop_factor': 4.45574246166366e-08, 'similarity': 'cosine', 'feature_weighting': 'none', 'topK': 381, 'shrink': 0}
