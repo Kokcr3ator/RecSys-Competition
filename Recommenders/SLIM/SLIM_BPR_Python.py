@@ -27,7 +27,7 @@ class SLIM_BPR_Python(BaseItemSimilarityMatrixRecommender):
 
 
 
-    def fit(self, topK = 100, epochs = 25, lambda_i = 0.0025, lambda_j = 0.00025, learning_rate = 0.05):
+    def fit(self, topK = 100, epochs = 25, lambda_i = 0.0025, lambda_j = 0.00025, learning_rate = 0.05,  merge_topPop= False, topPop_factor= 1e-6):
         """
 
         :param topK:
@@ -40,6 +40,7 @@ class SLIM_BPR_Python(BaseItemSimilarityMatrixRecommender):
 
 
         # Initialize similarity with zero values
+        super(SLIM_BPR_Python, self).fit(merge_topPop= merge_topPop, topPop_factor= topPop_factor)
         self.item_item_S = np.zeros((self.n_items, self.n_items), dtype = np.float)
 
         self.lambda_i = lambda_i
