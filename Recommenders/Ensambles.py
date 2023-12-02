@@ -196,6 +196,7 @@ class PipelineStep(BaseRecommender):
 
 
     def recommend(self, cutoff = None, remove_zero_scores= True, return_scores = True):
+        '''Custom recommend() method. No option for removing seen items (no point in deleting the ones in the URM_output).'''
         if cutoff is None:
             cutoff = self.URM_input.shape[1] - 1
         cutoff = min(cutoff, self.URM_input.shape[1] - 1)
