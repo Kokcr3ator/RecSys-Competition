@@ -255,8 +255,8 @@ class PipelineStep(BaseRecommender):
 
             if remove_zero_scores:
                 zero_scores_mask = [user_item_scores <= 0.0] 
-                not_inf_or_zero_scores_mask = np.logical_or(not_inf_scores_mask, np.logical_not(zero_scores_mask))
-                user_recommendation_list = user_recommendation_list[not_inf_or_zero_scores_mask] 
+                not_inf_nor_zero_scores_mask = np.logical_or(not_inf_scores_mask, np.logical_not(zero_scores_mask))
+                user_recommendation_list = user_recommendation_list[not_inf_nor_zero_scores_mask] 
 
             else: user_recommendation_list = user_recommendation_list[not_inf_scores_mask]
 
@@ -272,24 +272,55 @@ class PipelineStep(BaseRecommender):
 
         
     def compute_relevant_items(self, at= 200):
-        '''Compute the relevant items for all the users, merging the n_relevant_per_user most relevant
-            items for each user'''
-        ranking = self.recommend(self, cutoff = at, remove_zero_scores= True, return_scores = False)
-    
-        # TODO: set self.relevant_items_per_user =
-        # TODO: set self.relevant_items (use a np.logical_or())
+
+        '''
+        Computes the union of relevant items for all the users.
+        Returns a mask n_items long with 1 if the item is relevant for at least 1 user, 0 otherwise
+
+        '''
+        
+
+        relevant_items_all_users = self.recommend(self, cutoff = at, remove_zero_scores= True, return_scores = False)
+
+        def relevant_item_mask_single_user(relevant_items_single_user):
+
+            # Defining a function that for an array of relevant items of a user creates an array with length n_items 
+            # with 1 if the item is relevant, 0 otherwise 
+
+            mask = np.zeros(self.URM_train.shape[1])
+            mask[relevant_items_single_user] = 1
+        
+            return mask
+        
+        # Matrix mask for each user relevant_items_mask(i,j) = 1 if item j is relevant for user i, 0 otherwise
+
+        relevant_items_mask = np.array([relevant_item_mask_single_user(relevant_items_single_user) for relevant_items_single_user in relevant_items_all_users])
+
+        # Compute the logical or between all the rows
+
+        relevant_items = np.logical_or.reduce(relevant_items_mask)
+
+        return relevant_items
 
     
     def compute_output_URM(self, remove_non_relevant_items= False, n_relevant_items_per_user= 200, remove_non_relevant_users= False):
         '''Produces a new URM by removing the non-relevant items or users for the model'''
+
         if remove_non_relevant_items:
+
             self.n_relevant_per_user = n_relevant_items_per_user
+
             # remove non relevant items
-            
-            # TODO: call compute_relevant_items()
-            # TODO: remove items not belonging to the relevant_items list
-            # TODO: self.URM_output = 
+
+            items_to_keep = np.where(self.compute_relevant_items(at = self.n_relevant_per_user))[0]
+
+            URM_inputcsc = self.URM_input.tocsc()
+
+            self.URM_output = URM_inputcsc[:, items_to_keep.nonzero()[0]].tocsr()
+
             print("Successfully removed items non-relevant to the model.")
+
+            return self.URM_output
 
         if remove_non_relevant_users:
             # remove non relevant users
