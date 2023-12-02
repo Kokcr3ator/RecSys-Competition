@@ -228,13 +228,16 @@ class PipelineStep(BaseRecommender):
         # - Sort only the relevant items
         # - Get the original item index
         # relevant_items_partition is block_size x cutoff
-        relevant_items_partition = np.argpartition(-scores_batch, cutoff-1, axis=1)[:,0:cutoff]
+        relevant_items_partition = np.argpartition(-scores_batch, cutoff-1, axis=1)[:,0:cutoff] # get the partition for most relevant items
 
         # Get original value and sort it
         # [:, None] adds 1 dimension to the array, from (block_size,) to (block_size,1)
         # This is done to correctly get scores_batch value as [row, relevant_items_partition[row,:]]
-        relevant_items_partition_original_value = scores_batch[np.arange(scores_batch.shape[0])[:, None], relevant_items_partition]
-        relevant_items_partition_sorting = np.argsort(-relevant_items_partition_original_value, axis=1)
+        # Extract most relevant scores and indices
+        relevant_items_partition_original_value = scores_batch[np.arange(scores_batch.shape[0])[:, None], relevant_items_partition] 
+        # Sort most relevant
+        relevant_items_partition_sorting = np.argsort(-relevant_items_partition_original_value, axis=1) 
+        # ranking -> each row contains the indices of the top cutoff items for the corresponding row in the original scores_batch
         ranking = relevant_items_partition[np.arange(relevant_items_partition.shape[0])[:, None], relevant_items_partition_sorting]
 
         ranking_list = [None] * ranking.shape[0]
@@ -242,15 +245,19 @@ class PipelineStep(BaseRecommender):
         # Remove from the recommendation list any item that has a -inf score
         # Since -inf is a flag to indicate an item to remove
         for user_index in range(self.n_users):
-            user_recommendation_list = ranking[user_index]
-            user_item_scores = scores_batch[user_index, user_recommendation_list]
+            # user_recommendation_list -> indices of recommended items
+            user_recommendation_list = ranking[user_index] 
+            # user_item_scores -> scores corresponding to the recommended items
+            user_item_scores = scores_batch[user_index, user_recommendation_list] 
 
             not_inf_scores_mask = np.logical_not(np.isinf(user_item_scores))
-            user_recommendation_list = user_recommendation_list[not_inf_scores_mask]
 
             if remove_zero_scores:
-                zero_scores_mask = [user_item_scores <= 0.0]
-                user_recommendation_list = user_recommendation_list[zero_scores_mask]
+                zero_scores_mask = [user_item_scores <= 0.0] 
+                not_inf_or_zero_scores_mask = np.logical_or(not_inf_scores_mask, np.logical_not(zero_scores_mask))
+                user_recommendation_list = user_recommendation_list[not_inf_or_zero_scores_mask] 
+
+            else: user_recommendation_list = user_recommendation_list[not_inf_scores_mask]
 
             ranking_list[user_index] = user_recommendation_list.tolist()
 
@@ -266,7 +273,7 @@ class PipelineStep(BaseRecommender):
     def compute_relevant_items(self, at= 200):
         '''Compute the relevant items for all the users, merging the n_relevant_per_user most relevant
             items for each user'''
-        ranking, relevant_items = self.recommend(self, cutoff = at, remove_zero_scores= True, return_scores = True)
+        ranking = self.recommend(self, cutoff = at, remove_zero_scores= True, return_scores = False)
     
         # TODO: set self.relevant_items_per_user =
         # TODO: set self.relevant_items (use a np.logical_or())
