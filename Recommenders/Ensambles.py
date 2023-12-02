@@ -18,6 +18,9 @@ class LinearCombination(BaseRecommender):
             self.weights_list = [1/self.n_recommenders] * self.n_recommenders # uniform weights if not specified
         else: self.weights_list = weights_list
 
+    def set_weights_list(self,weights_list):
+        self.weights_list = weights_list
+
     def fit(self, merge_topPop= False, topPop_factor= 1e-6):
         '''
             Fit each of the Recommender objects in the ensamble by calling fit() method for each of them.
