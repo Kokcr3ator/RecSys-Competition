@@ -2,5 +2,6 @@ submission.csv
 Practice 06 - SLIM MSE with Gradient Descent and Cython
 SimMatrix(1e-3)
 *.c
-*.pyc
 *.html
+*.pyc
+
