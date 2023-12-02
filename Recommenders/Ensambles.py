@@ -18,6 +18,18 @@ class LinearCombination(BaseRecommender):
             self.weights_list = [1/self.n_recommenders] * self.n_recommenders # uniform weights if not specified
         else: self.weights_list = weights_list
 
+
+
+    def get_models_list(self):
+        return self.recommenders_list
+    
+
+    
+    def set_models_list(self, models_list):
+        self.recommenders_list = models_list
+
+
+
     def fit(self, merge_topPop= False, topPop_factor= 1e-6):
         '''
             Fit each of the Recommender objects in the ensamble by calling fit() method for each of them.
@@ -35,6 +47,8 @@ class LinearCombination(BaseRecommender):
             recommender_object = self.recommenders_list[recommender]
             recommender_object.fit(**hyperparams)
             print("Successfully fitted Recommender", recommender+1, ":", recommender_object.RECOMMENDER_NAME)
+            
+
     
     def recommend(self, user_id_array, cutoff = None, remove_seen_flag=True, items_to_compute = None,
                   remove_top_pop_flag = False, remove_custom_items_flag = False, return_scores = False):
@@ -139,6 +153,89 @@ class LinearCombination(BaseRecommender):
 
         else:
             return ranking_list
+        
+
+
+    def set_URM_train(self, URM_train):
+        self.URM_train = URM_train
+        for recommender in self.recommenders_list:
+            recommender.set_URM_train(URM_train)
+
+
+class PipelineStep(BaseRecommender):
+    """Recommender as step of a Recommenders' pipeline"""
+
+    RECOMMENDER_NAME = "Pipeline_Step_Ensamble_Recommender_Class"
+
+    def __init__(self, URM_input, recommender_object, hyperparameters_dict, n_relevant_per_user= 200, verbose=True):
+        super(PipelineStep, self).__init__(URM_input, verbose=verbose)
+        self.URM_train = None
+        self.URM_input = URM_input
+
+        self.recommender_object = recommender_object
+        self.hyperparameters_dict = hyperparameters_dict
+
+        self.n_relevant_per_user= n_relevant_per_user
+        self.relevant_items_per_user = None
+        self.relevant_items = None
+
+
+    
+    def fit(self, merge_topPop= False, topPop_factor= 1e-6):
+        # These parameters allow to utilize TopPopRecommender for filling in zero ratings, when you don't have enough
+        # recommendations
+        self.merge_topPop = merge_topPop
+        self.topPop_factor = 0.0
+        if self.merge_topPop:
+            self.topPop_factor = topPop_factor
+
+        self.recommender_object.fit(**self.hyperparameters_dict)
+
+
+
+    def compute_relevant_items(self):
+        '''Compute the relevant items for all the users, merging the n_relevant_per_user most relevant
+            items for each user'''
+        # TODO: call recommend() for all users
+        # TODO: set self.relevant_items_per_user =
+        # TODO: set self.relevant_items (use a np.logical_or())
+
+    
+    def compute_output_URM(self, remove_non_relevant_items= False, remove_non_relevant_users= False):
+        '''Produces a new URM by removing the non-relevant items or users for the model'''
+        if remove_non_relevant_items:
+            # remove non relevant items
+
+            # TODO: call compute_relevant_items()
+            # TODO: remove items not belonging to the relevant_items list
+            # TODO: self.URM_output = 
+            print("Successfully removed items non-relevant to the model.")
+
+        if remove_non_relevant_users:
+            # remove non relevant users
+            pass
+            # TODO: self.URM_output = 
+            #print("Successfully removed items non-relevant to the model.")
+
+
+
+    def get_output_URM(self):
+        if self.URM_output == None:
+            print("Output URM has not been computed yet.\n Calling compute_output_URM().")
+            self.compute_output_URM()
+        else: return self.URM_output
+
+    def get_relevant_items_per_user(self):
+        if self.relevant_items_per_user == None:
+            print("Relevant items to each user have not been computed yet.\n Calling compute_relevant_items().")
+            self.compute_relevant_items()
+        return self.relevant_items_per_user
+    
+    def get_relevant_items(self):
+        if self.relevant_items == None:
+            print("Relevant items have not been computed yet.\n Calling compute_relevant_items().")
+            self.compute_relevant_items()
+        return self.relevant_items
 
 
 
