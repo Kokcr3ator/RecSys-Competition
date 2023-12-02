@@ -27,11 +27,10 @@ class LinearCombination(BaseRecommender):
     
     def set_models_list(self, models_list):
         self.recommenders_list = models_list
+      
 
     def set_weights_list(self, weights_list):
         self.weights_list = weights_list
-        
-
 
 
     def fit(self, merge_topPop= False, topPop_factor= 1e-6):
@@ -282,36 +281,34 @@ class PipelineStep(BaseRecommender):
         Returns a mask n_items long with 1 if the item is relevant for at least 1 user, 0 otherwise
 
         '''
+        
+
         relevant_items_all_users = self.recommend(self, cutoff = at, remove_zero_scores= True, return_scores = False)
-        self.relevant_items_per_user = relevant_items_all_users
 
         def relevant_item_mask_single_user(relevant_items_single_user):
-            ''' 
-            Defining a function that for an array of relevant items of a user creates an array with length n_items 
-            with 1 if the item is relevant, 0 otherwise 
 
-            '''
+            # Defining a function that for an array of relevant items of a user creates an array with length n_items 
+            # with 1 if the item is relevant, 0 otherwise 
+
             mask = np.zeros(self.URM_train.shape[1])
             mask[relevant_items_single_user] = 1
         
             return mask
         
         # Matrix mask for each user relevant_items_mask(i,j) = 1 if item j is relevant for user i, 0 otherwise
+
         relevant_items_mask = np.array([relevant_item_mask_single_user(relevant_items_single_user) for relevant_items_single_user in relevant_items_all_users])
 
         # Compute the logical or between all the rows
+
         relevant_items = np.logical_or.reduce(relevant_items_mask)
-        self.relevant_items = relevant_items
 
         return relevant_items
-    
 
     
     def compute_output_URM(self, remove_non_relevant_items= False, n_relevant_items_per_user= 200, remove_non_relevant_users= False):
-        '''
-        Produces a new URM by removing the non-relevant items or users for the model
-        
-        '''
+        '''Produces a new URM by removing the non-relevant items or users for the model'''
+
         if remove_non_relevant_items:
 
             self.n_relevant_per_user = n_relevant_items_per_user
@@ -342,15 +339,11 @@ class PipelineStep(BaseRecommender):
             self.compute_output_URM()
         else: return self.URM_output
 
-
-
     def get_relevant_items_per_user(self):
         if self.relevant_items_per_user == None:
             print("Relevant items to each user have not been computed yet.\n Calling compute_relevant_items().")
             self.compute_relevant_items()
         return self.relevant_items_per_user
-    
-    
     
     def get_relevant_items(self):
         if self.relevant_items == None:
