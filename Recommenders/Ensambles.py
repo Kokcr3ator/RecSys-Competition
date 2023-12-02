@@ -28,6 +28,10 @@ class LinearCombination(BaseRecommender):
     def set_models_list(self, models_list):
         self.recommenders_list = models_list
 
+    def set_weights_list(self, weights_list):
+        self.weights_list = weights_list
+        
+
 
 
     def fit(self, merge_topPop= False, topPop_factor= 1e-6):
