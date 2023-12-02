@@ -179,13 +179,15 @@ class PipelineStep(BaseRecommender):
         self.relevant_items_per_user = None
         self.relevant_items = None
 
+        self.merge_topPop = False
+        self.topPop_factor = 0.0
+
 
     
     def fit(self, merge_topPop= False, topPop_factor= 1e-6):
         # These parameters allow to utilize TopPopRecommender for filling in zero ratings, when you don't have enough
         # recommendations
         self.merge_topPop = merge_topPop
-        self.topPop_factor = 0.0
         if self.merge_topPop:
             self.topPop_factor = topPop_factor
 
@@ -193,19 +195,89 @@ class PipelineStep(BaseRecommender):
 
 
 
-    def compute_relevant_items(self):
+    def recommend(self, cutoff = None, remove_zero_scores= True, return_scores = True):
+        if cutoff is None:
+            cutoff = self.URM_input.shape[1] - 1
+        cutoff = min(cutoff, self.URM_input.shape[1] - 1)
+        
+        scores_batch = self.recommender_object._compute_item_score(np.range(self.n_users))
+
+        if self.merge_topPop:
+            n_items = self.URM_train.shape[1]
+
+            # Compute TopPop
+            item_popularity = np.ediff1d(self.URM_train.tocsc().indptr)
+            popular_items = np.argsort(item_popularity)
+            popular_items = np.flip(popular_items, axis = 0)
+                
+            # positions array is a vector containing the positions (from 1 to n_items)
+            positions = np.arange(n_items)
+            positions +=1
+
+            # Create mapping to associate the position to the item_id
+            map_index_position = {popular_items[i]:positions[i] for i in range(len(positions))}
+            
+            # Apply the column-wise operation : score = score + topPop_factor*(n_items - position)/ n_items
+            def popularity_add(column, index):
+                return column + self.topPop_factor*((n_items - map_index_position[index] )/(n_items)) 
+                
+            scores_batch = np.array([popularity_add(scores_batch[:, i], i) for i in range(n_items)]).T
+
+        # Sorting is done in three steps. Faster then plain np.argsort for higher number of items
+        # - Partition the data to extract the set of relevant items
+        # - Sort only the relevant items
+        # - Get the original item index
+        # relevant_items_partition is block_size x cutoff
+        relevant_items_partition = np.argpartition(-scores_batch, cutoff-1, axis=1)[:,0:cutoff]
+
+        # Get original value and sort it
+        # [:, None] adds 1 dimension to the array, from (block_size,) to (block_size,1)
+        # This is done to correctly get scores_batch value as [row, relevant_items_partition[row,:]]
+        relevant_items_partition_original_value = scores_batch[np.arange(scores_batch.shape[0])[:, None], relevant_items_partition]
+        relevant_items_partition_sorting = np.argsort(-relevant_items_partition_original_value, axis=1)
+        ranking = relevant_items_partition[np.arange(relevant_items_partition.shape[0])[:, None], relevant_items_partition_sorting]
+
+        ranking_list = [None] * ranking.shape[0]
+
+        # Remove from the recommendation list any item that has a -inf score
+        # Since -inf is a flag to indicate an item to remove
+        for user_index in range(self.n_users):
+            user_recommendation_list = ranking[user_index]
+            user_item_scores = scores_batch[user_index, user_recommendation_list]
+
+            not_inf_scores_mask = np.logical_not(np.isinf(user_item_scores))
+            user_recommendation_list = user_recommendation_list[not_inf_scores_mask]
+
+            if remove_zero_scores:
+                zero_scores_mask = [user_item_scores <= 0.0]
+                user_recommendation_list = user_recommendation_list[zero_scores_mask]
+
+            ranking_list[user_index] = user_recommendation_list.tolist()
+
+
+        if return_scores:
+            return ranking_list, scores_batch
+
+        else:
+            return ranking_list
+        
+
+        
+    def compute_relevant_items(self, at= 200):
         '''Compute the relevant items for all the users, merging the n_relevant_per_user most relevant
             items for each user'''
-        # TODO: call recommend() for all users
+        ranking, relevant_items = self.recommend(self, cutoff = at, remove_zero_scores= True, return_scores = True)
+    
         # TODO: set self.relevant_items_per_user =
         # TODO: set self.relevant_items (use a np.logical_or())
 
     
-    def compute_output_URM(self, remove_non_relevant_items= False, remove_non_relevant_users= False):
+    def compute_output_URM(self, remove_non_relevant_items= False, n_relevant_items_per_user= 200, remove_non_relevant_users= False):
         '''Produces a new URM by removing the non-relevant items or users for the model'''
         if remove_non_relevant_items:
+            self.n_relevant_per_user = n_relevant_items_per_user
             # remove non relevant items
-
+            
             # TODO: call compute_relevant_items()
             # TODO: remove items not belonging to the relevant_items list
             # TODO: self.URM_output = 
