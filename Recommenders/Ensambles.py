@@ -17,8 +17,7 @@ class LinearCombination(BaseRecommender):
         if weights_list == None:
             self.weights_list = [1/self.n_recommenders] * self.n_recommenders # uniform weights if not specified
         else: self.weights_list = weights_list
-
-
+          
 
     def get_models_list(self):
         return self.recommenders_list
@@ -28,7 +27,10 @@ class LinearCombination(BaseRecommender):
     def set_models_list(self, models_list):
         self.recommenders_list = models_list
 
-
+        
+    def set_weights_list(self,weights_list):
+        self.weights_list = weights_list
+        
 
     def fit(self, merge_topPop= False, topPop_factor= 1e-6):
         '''

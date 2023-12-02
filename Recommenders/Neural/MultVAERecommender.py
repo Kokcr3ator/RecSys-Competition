@@ -15,6 +15,8 @@ import os,  shutil, zipfile
 import numpy as np
 from scipy import sparse
 from Recommenders.Neural.architecture_utils import generate_autoencoder_architecture
+import tensorflow as tf
+
 
 
 from Recommenders.BaseRecommender import BaseRecommender
