@@ -151,7 +151,7 @@ class SVDFeature(BaseRecommender):
 
         print("SVDFeature: Fit starting")
 
-        args = ["svd_feature",
+        args = ["svd_feature_train",
                 #"active_type=3",
                 "input_type=1",
                 "data_in={}".format(self.temp_file_folder + self.FILE_MODEL_NAME),
