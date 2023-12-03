@@ -50,8 +50,13 @@ class LinearCombination(BaseRecommender):
             recommender_object = self.recommenders_list[recommender]
             recommender_object.fit(**hyperparams)
             print("Successfully fitted Recommender", recommender+1, ":", recommender_object.RECOMMENDER_NAME)
+    
+    def set_merge_topPop(self, merge_topPop):
+        self.merge_topPop = merge_topPop
+    
+    def set_topPop_factor(self, topPop_factor):
+        self.topPop_factor = topPop_factor
             
-
     
     def recommend(self, user_id_array, cutoff = None, remove_seen_flag=True, items_to_compute = None,
                   remove_top_pop_flag = False, remove_custom_items_flag = False, return_scores = False):
