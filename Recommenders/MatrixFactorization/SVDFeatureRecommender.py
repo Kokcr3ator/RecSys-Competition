@@ -24,7 +24,7 @@ class SVDFeature(BaseRecommender):
 
     def __init__(self, URM_train, ICM=None, UCM=None):
 
-        super(SVDFeature, self).__init__()
+        super(SVDFeature, self).__init__(URM_train)
 
         self.URM_train = check_matrix(URM_train, "csr")
         self.ICM = ICM
