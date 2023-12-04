@@ -262,6 +262,7 @@ class DataIO(object):
                 # Process the directory
                 for root, dirs, files in os.walk(current_temp_folder):
                     for file in files:
+                        print(file)
                         file_path = os.path.join(root, file)
                         file_extension = file.split(".")[-1]
                         attrib_name = file[:-len(file_extension) - 1]
@@ -273,7 +274,7 @@ class DataIO(object):
                         elif file_extension == "npz":
                             attrib_data = sps.load_npz(file_path)
                         elif file_extension == "npy":
-                            attrib_data = np.load(file_path, allow_pickle=True)
+                            attrib_data = np.load(file_path, allow_pickle=False)
                         elif file_extension == "json":
                             with open(file_path, "r") as json_file:
                                 attrib_data = json.load(json_file)
