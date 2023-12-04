@@ -206,6 +206,7 @@ class DataIO(object):
     def load_data(self, file_name):
         # Check if the input is a directory
         is_directory = os.path.isdir(self.folder_path + "/" + file_name)
+        print(self.folder_path + "/" + file_name)
 
         if not is_directory and file_name[-4:] != ".zip":
             file_name += ".zip"
