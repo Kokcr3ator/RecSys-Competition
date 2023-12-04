@@ -392,13 +392,13 @@ class PipelineStep(BaseRecommender):
         else: return self.URM_output
 
     def get_relevant_items_per_user(self):
-        if self.relevant_items_per_user == None:
+        if self.relevant_items_per_user.any() == None:
             print("Relevant items to each user have not been computed yet.\n Calling compute_relevant_items().")
             self.compute_relevant_items()
         return self.relevant_items_per_user
     
     def get_relevant_items(self):
-        if self.relevant_items == None:
+        if self.relevant_items.any() == None:
             print("Relevant items have not been computed yet.\n Calling compute_relevant_items().")
             self.compute_relevant_items()
         return self.relevant_items
