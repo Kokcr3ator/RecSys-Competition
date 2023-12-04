@@ -30,6 +30,9 @@ class BaseRecommender(object):
         self.items_to_ignore_flag = False
         self.items_to_ignore_ID = np.array([], dtype=np.int)
 
+        self.items_to_ignore_per_user_flag = False
+        self.items_to_ignore_ID_per_user = np.array([], dtype=np.int)
+
         self._cold_user_mask = np.ediff1d(self.URM_train.indptr) == 0
 
         if self._cold_user_mask.any():
@@ -88,6 +91,15 @@ class BaseRecommender(object):
         self.items_to_ignore_ID = np.array([], dtype=np.int)
 
 
+    def set_items_to_ignore_per_user(self, items_to_ignore):
+        self.items_to_ignore_per_user_flag = True
+        self.items_to_ignore_ID_per_user = np.array(items_to_ignore, dtype=np.int)
+
+    def reset_items_to_ignore_per_user(self):
+        self.items_to_ignore_per_user_flag = False
+        self.items_to_ignore_ID_per_user = np.array([], dtype=np.int)
+
+
     #########################################################################################################
     ##########                                                                                     ##########
     ##########                     COMPUTE AND FILTER RECOMMENDATION LIST                          ##########
@@ -102,6 +114,10 @@ class BaseRecommender(object):
 
     def _remove_custom_items_on_scores(self, scores_batch):
         scores_batch[:, self.items_to_ignore_ID] = -np.inf
+        return scores_batch
+    
+    def _remove_custom_items_per_user_on_scores(self, scores_batch):
+        scores_batch = [(scores_batch[user_id, self.items_to_ignore_ID_per_user] = -np.inf) for user_id in range(self.n_users)]
         return scores_batch
 
 
@@ -127,7 +143,8 @@ class BaseRecommender(object):
 
 
     def recommend(self, user_id_array, cutoff = None, remove_seen_flag=True, items_to_compute = None,
-                  remove_top_pop_flag = False, remove_custom_items_flag = False, return_scores = False):
+                  remove_top_pop_flag = False, remove_custom_items_flag = False, remove_custom_items_per_user_flag = False,
+                  return_scores = False):
 
         # If is a scalar transform it in a 1-cell array
         if np.isscalar(user_id_array):
@@ -159,6 +176,10 @@ class BaseRecommender(object):
 
         if remove_custom_items_flag:
             scores_batch = self._remove_custom_items_on_scores(scores_batch)
+
+        if remove_custom_items_per_user_flag:
+            scores_batch = self._remove_custom_items_per_user_on_scores(scores_batch)
+
 
         # Sorting is done in three steps. Faster then plain np.argsort for higher number of items
         # - Partition the data to extract the set of relevant items
