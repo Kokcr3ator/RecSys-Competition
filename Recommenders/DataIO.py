@@ -212,7 +212,7 @@ class DataIO(object):
             file_name += ".zip"
 
         if is_directory:
-            current_temp_folder = self._get_temp_folder(file_name)
+            current_temp_folder = file_name
         else:
             dataFile = zipfile.ZipFile(file_name)
             dataFile.testzip()
