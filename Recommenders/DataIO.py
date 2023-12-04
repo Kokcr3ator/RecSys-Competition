@@ -208,9 +208,9 @@ class DataIO(object):
         if file_name[-4:] != ".zip":
             file_name += ".zip"
 
-        dataFile = zipfile.ZipFile(self.folder_path + file_name)
+        # dataFile = zipfile.ZipFile(self.folder_path + file_name)
 
-        dataFile.testzip()
+        # dataFile.testzip()
 
         current_temp_folder = self._get_temp_folder(file_name)
 
