@@ -501,7 +501,7 @@ class EvaluatorHoldout(Evaluator):
             if self.pipeline_mode:
                 scores_batch_mapped = np.zeros(len(self.pipeline_mapping))
                 relevant_indices = np.where(self.pipeline_mapping == 1)[0]
-                scores_batch_mapped[relevant_indices] = scores_batch
+                scores_batch_mapped[:,relevant_indices] = scores_batch
                 scores_batch = scores_batch_mapped
 
 
