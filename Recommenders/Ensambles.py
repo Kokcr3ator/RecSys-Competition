@@ -1,4 +1,5 @@
 from Recommenders.BaseRecommender import BaseRecommender
+from Recommenders.DataIO import DataIO
 
 import numpy as np
 
@@ -18,17 +19,7 @@ class LinearCombination(BaseRecommender):
             self.weights_list = [1/self.n_recommenders] * self.n_recommenders # uniform weights if not specified
         else: self.weights_list = weights_list
 
-
-
-    def get_models_list(self):
-        return self.recommenders_list
-    
-
-    
-    def set_models_list(self, models_list):
-        self.recommenders_list = models_list
-
-
+          
 
     def fit(self, merge_topPop= False, topPop_factor= 1e-6):
         '''
@@ -48,7 +39,7 @@ class LinearCombination(BaseRecommender):
             recommender_object.fit(**hyperparams)
             print("Successfully fitted Recommender", recommender+1, ":", recommender_object.RECOMMENDER_NAME)
 
-
+            
     
     def _compute_item_score(self, user_id_array, items_to_compute = None):
         '''
@@ -64,8 +55,11 @@ class LinearCombination(BaseRecommender):
         scores_batch = np.average(scores_batch_array, axis= 0, weights= self.weights_list)
 
         return scores_batch
-            
 
+    
+ 
+
+            
     
     def recommend(self, user_id_array, cutoff = None, remove_seen_flag=True, items_to_compute = None,
                   remove_top_pop_flag = False, remove_custom_items_flag = False, return_scores = False):
@@ -164,14 +158,63 @@ class LinearCombination(BaseRecommender):
 
         else:
             return ranking_list
+            
+            
+    
+    def save_model(self, folder_path, file_name = None):
+
+        if file_name is None:
+            file_name = self.RECOMMENDER_NAME
+
+        self._print("Saving model in file '{}'".format(folder_path + file_name))
         
+        for recommender_object in self.recommenders_list:
+            recommender_object.save_model(folder_path = folder_path + "/" + self.RECOMMENDER_NAME)
+
+        self._print("Saving complete")
+        
+    
+    def load_model(self, folder_path, file_name = None):
+
+        if file_name is None:
+            file_name = self.RECOMMENDER_NAME
+
+        self._print("Loading model from file '{}'".format(folder_path + file_name))
+
+        for recommender_object in self.recommenders_list:
+            recommender_object.load_model(folder_path = folder_path)
+        
+        self._print("Loading complete")
+            
 
 
     def set_URM_train(self, URM_train):
         self.URM_train = URM_train
         for recommender in self.recommenders_list:
             recommender.set_URM_train(URM_train)
+        
+        
+      
+    def get_models_list(self):
+        return self.recommenders_list
+   
+    def set_models_list(self, models_list):
+        self.recommenders_list = models_list
+      
+      
 
+    def set_weights_list(self, weights_list):
+        self.weights_list = weights_list
+        
+        
+    
+    def set_merge_topPop(self, merge_topPop):
+        self.merge_topPop = merge_topPop
+    
+    def set_topPop_factor(self, topPop_factor):
+        self.topPop_factor = topPop_factor
+
+            
 
 class PipelineStep(BaseRecommender):
     """Recommender as step of a Recommenders' pipeline"""
@@ -289,31 +332,30 @@ class PipelineStep(BaseRecommender):
         Returns a mask n_items long with 1 if the item is relevant for at least 1 user, 0 otherwise
 
         '''
-        
+
         relevant_items_all_users = self.recommend(cutoff = at, remove_zero_scores= True, return_scores = False)
         self.relevant_items_per_user = relevant_items_all_users
 
         def relevant_item_mask_single_user(relevant_items_single_user):
-            ''' 
-            Defining a function that for an array of relevant items of a user creates an array with length n_items 
-            with 1 if the item is relevant, 0 otherwise 
+            # Defining a function that for an array of relevant items of a user creates an array with length n_items 
+            # with 1 if the item is relevant, 0 otherwise 
 
-            '''
-            mask = np.zeros(self.URM_input.shape[1])
+            mask = np.zeros(self.URM_train.shape[1])
             mask[relevant_items_single_user] = 1
         
             return mask
         
         # Matrix mask for each user relevant_items_mask(i,j) = 1 if item j is relevant for user i, 0 otherwise
+
         relevant_items_mask = np.array([relevant_item_mask_single_user(relevant_items_single_user) for relevant_items_single_user in relevant_items_all_users])
 
         # Compute the logical or between all the rows
+
         relevant_items = np.logical_or.reduce(relevant_items_mask)
-        self.relevant_items = relevant_items
 
         return relevant_items
-    
 
+    
     
     def compute_output_URM(self, remove_non_relevant_items= True, n_relevant_items_per_user= 200, remove_non_relevant_users= False):
         '''
@@ -350,15 +392,11 @@ class PipelineStep(BaseRecommender):
             self.compute_output_URM()
         else: return self.URM_output
 
-
-
     def get_relevant_items_per_user(self):
         if self.relevant_items_per_user == None:
             print("Relevant items to each user have not been computed yet.\n Calling compute_relevant_items().")
             self.compute_relevant_items()
         return self.relevant_items_per_user
-    
-    
     
     def get_relevant_items(self):
         if self.relevant_items == None:
