@@ -257,7 +257,7 @@ class Evaluator(object):
         '''
         pipeline_mapping is a mask  assigning a value of 0 to items that are not relevant (absent in URM_train but present 
         in URM_test) and a value of 1 to items that are relevant (the only ones contained in URM_train).
-        
+
         '''
         self.pipeline_mapping = mapping
         self.pipeline_mode = True
@@ -495,10 +495,9 @@ class EvaluatorHoldout(Evaluator):
                                                                       return_scores = True
                                                                      )
             
-            # TODO: Once you have created a mapping from URM_output to URM_train (item_id), here you should map 
-            # recommended_items_batch_list to a vector of the same length of the original (fill with zeros).
-            # We already have the mapping when we compute the relevant items of the PipelineStep?
-            # Maybe create a flag pipeline_mode= True
+            # In pipeline_mode: Once you have the mapping items from URM_train to URM_test (pipeline_mapping), you should map 
+            # scores_batch to an array of the same length of the original number of items (setting to zero the scores for
+            # the users not belonging to the URM_train).
             if self.pipeline_mode:
                 scores_batch_mapped = np.zeros(len(self.pipeline_mapping))
                 relevant_indices = np.where(self.pipeline_mapping == 1)[0]
