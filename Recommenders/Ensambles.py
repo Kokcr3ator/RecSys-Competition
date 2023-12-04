@@ -19,20 +19,7 @@ class LinearCombination(BaseRecommender):
             self.weights_list = [1/self.n_recommenders] * self.n_recommenders # uniform weights if not specified
         else: self.weights_list = weights_list
 
-
-
-    def get_models_list(self):
-        return self.recommenders_list
-    
-
-    
-    def set_models_list(self, models_list):
-        self.recommenders_list = models_list
-      
-
-    def set_weights_list(self, weights_list):
-        self.weights_list = weights_list
-
+          
 
     def fit(self, merge_topPop= False, topPop_factor= 1e-6):
         '''
@@ -51,21 +38,35 @@ class LinearCombination(BaseRecommender):
             recommender_object = self.recommenders_list[recommender]
             recommender_object.fit(**hyperparams)
             print("Successfully fitted Recommender", recommender+1, ":", recommender_object.RECOMMENDER_NAME)
+
+            
     
-    def set_merge_topPop(self, merge_topPop):
-        self.merge_topPop = merge_topPop
+    def _compute_item_score(self, user_id_array, items_to_compute = None):
+        '''
+        Compute the scores for the items provided by weighted-averaging over the scores computed by each of the 
+        Recommenders in the Ensamble.
+
+        '''
+        # For each Recommender object we compute the scores and store them in scores_batch_array
+        scores_batch_array = np.array([recommender_object._compute_item_score(user_id_array, items_to_compute=items_to_compute) 
+                                       for recommender_object in self.recommenders_list])
+        
+        # Now compute the ensamble scores by calculating a weighted average over the scores of each Recommender
+        scores_batch = np.average(scores_batch_array, axis= 0, weights= self.weights_list)
+
+        return scores_batch
+
     
-    def set_topPop_factor(self, topPop_factor):
-        self.topPop_factor = topPop_factor
+ 
+
             
     
     def recommend(self, user_id_array, cutoff = None, remove_seen_flag=True, items_to_compute = None,
                   remove_top_pop_flag = False, remove_custom_items_flag = False, return_scores = False):
         '''
-            Compute the recommendations by weighted-averaging over the scores computed by each of the 
-            Recommenders in the Ensamble.
-        '''
+        Compute the recommendations of the Ensamble
 
+        '''
         # If is a scalar transform it in a 1-cell array
         if np.isscalar(user_id_array):
             user_id_array = np.atleast_1d(user_id_array)
@@ -81,12 +82,7 @@ class LinearCombination(BaseRecommender):
         # Compute the scores using the model-specific function
         # Vectorize over all users in user_id_array
 
-        # For each Recommender object we compute the scores and store them in scores_batch_array
-        scores_batch_array = np.array([recommender_object._compute_item_score(user_id_array, items_to_compute=items_to_compute) 
-                                       for recommender_object in self.recommenders_list])
-
-        # Now compute the ensamble scores by calculating a weighted average over the scores of each Recommender
-        scores_batch = np.average(scores_batch_array, axis= 0, weights= self.weights_list)
+        scores_batch = self._compute_item_score(user_id_array, items_to_compute=items_to_compute)
 
         if self.merge_topPop:
             n_items = self.URM_train.shape[1]
@@ -162,13 +158,8 @@ class LinearCombination(BaseRecommender):
 
         else:
             return ranking_list
-        
-
-
-    def set_URM_train(self, URM_train):
-        self.URM_train = URM_train
-        for recommender in self.recommenders_list:
-            recommender.set_URM_train(URM_train)
+            
+            
     
     def save_model(self, folder_path, file_name = None):
 
@@ -181,6 +172,7 @@ class LinearCombination(BaseRecommender):
             recommender_object.save_model(folder_path = folder_path + "/" + self.RECOMMENDER_NAME)
 
         self._print("Saving complete")
+        
     
     def load_model(self, folder_path, file_name = None):
 
@@ -193,6 +185,35 @@ class LinearCombination(BaseRecommender):
             recommender_object.load_model(folder_path = folder_path)
         
         self._print("Loading complete")
+            
+
+
+    def set_URM_train(self, URM_train):
+        self.URM_train = URM_train
+        for recommender in self.recommenders_list:
+            recommender.set_URM_train(URM_train)
+        
+        
+      
+    def get_models_list(self):
+        return self.recommenders_list
+   
+    def set_models_list(self, models_list):
+        self.recommenders_list = models_list
+      
+      
+
+    def set_weights_list(self, weights_list):
+        self.weights_list = weights_list
+        
+        
+    
+    def set_merge_topPop(self, merge_topPop):
+        self.merge_topPop = merge_topPop
+    
+    def set_topPop_factor(self, topPop_factor):
+        self.topPop_factor = topPop_factor
+
             
 
 class PipelineStep(BaseRecommender):
@@ -234,7 +255,7 @@ class PipelineStep(BaseRecommender):
             cutoff = self.URM_input.shape[1] - 1
         cutoff = min(cutoff, self.URM_input.shape[1] - 1)
         
-        scores_batch = self.recommender_object._compute_item_score(np.range(self.n_users))
+        scores_batch = self.recommender_object._compute_item_score(range(self.n_users))
 
         if self.merge_topPop:
             n_items = self.URM_train.shape[1]
@@ -287,8 +308,8 @@ class PipelineStep(BaseRecommender):
             not_inf_scores_mask = np.logical_not(np.isinf(user_item_scores))
 
             if remove_zero_scores:
-                zero_scores_mask = [user_item_scores <= 0.0] 
-                not_inf_nor_zero_scores_mask = np.logical_or(not_inf_scores_mask, np.logical_not(zero_scores_mask))
+                non_zero_scores_mask = np.logical_not(user_item_scores <= 0.0)
+                not_inf_nor_zero_scores_mask = np.logical_and(not_inf_scores_mask, non_zero_scores_mask)
                 user_recommendation_list = user_recommendation_list[not_inf_nor_zero_scores_mask] 
 
             else: user_recommendation_list = user_recommendation_list[not_inf_scores_mask]
@@ -311,12 +332,11 @@ class PipelineStep(BaseRecommender):
         Returns a mask n_items long with 1 if the item is relevant for at least 1 user, 0 otherwise
 
         '''
-        
 
-        relevant_items_all_users = self.recommend(self, cutoff = at, remove_zero_scores= True, return_scores = False)
+        relevant_items_all_users = self.recommend(cutoff = at, remove_zero_scores= True, return_scores = False)
+        self.relevant_items_per_user = relevant_items_all_users
 
         def relevant_item_mask_single_user(relevant_items_single_user):
-
             # Defining a function that for an array of relevant items of a user creates an array with length n_items 
             # with 1 if the item is relevant, 0 otherwise 
 
@@ -336,9 +356,12 @@ class PipelineStep(BaseRecommender):
         return relevant_items
 
     
-    def compute_output_URM(self, remove_non_relevant_items= False, n_relevant_items_per_user= 200, remove_non_relevant_users= False):
-        '''Produces a new URM by removing the non-relevant items or users for the model'''
-
+    
+    def compute_output_URM(self, remove_non_relevant_items= True, n_relevant_items_per_user= 200, remove_non_relevant_users= False):
+        '''
+        Produces a new URM by removing the non-relevant items or users for the model
+        
+        '''
         if remove_non_relevant_items:
 
             self.n_relevant_per_user = n_relevant_items_per_user
@@ -380,6 +403,7 @@ class PipelineStep(BaseRecommender):
             print("Relevant items have not been computed yet.\n Calling compute_relevant_items().")
             self.compute_relevant_items()
         return self.relevant_items
+
 
 
 
