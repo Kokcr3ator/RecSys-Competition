@@ -499,9 +499,11 @@ class EvaluatorHoldout(Evaluator):
             # scores_batch to an array of the same length of the original number of items (setting to zero the scores for
             # the users not belonging to the URM_train).
             if self.pipeline_mode:
-                scores_batch_mapped = np.zeros(len(self.pipeline_mapping))
+                scores_batch_mapped = np.zeros(scores_batch.shape)
                 relevant_indices = np.where(self.pipeline_mapping == 1)[0]
-                scores_batch_mapped[:,relevant_indices] = scores_batch
+                relevant_indices = np.tile(relevant_indices, (scores_batch.shape[0], 1)) # Duplicate relevant indices for each row in scores_batch,
+                                                                                         # to match scores_batch shape
+                scores_batch_mapped[relevant_indices] = scores_batch
                 scores_batch = scores_batch_mapped
 
 
