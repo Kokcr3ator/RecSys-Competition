@@ -1,4 +1,5 @@
 from Recommenders.BaseRecommender import BaseRecommender
+from Recommenders.DataIO import DataIO
 
 import numpy as np
 
@@ -168,7 +169,31 @@ class LinearCombination(BaseRecommender):
         self.URM_train = URM_train
         for recommender in self.recommenders_list:
             recommender.set_URM_train(URM_train)
+    
+    def save_model(self, folder_path, file_name = None):
 
+        if file_name is None:
+            file_name = self.RECOMMENDER_NAME
+
+        self._print("Saving model in file '{}'".format(folder_path + file_name))
+        
+        for recommender_object in self.recommenders_list:
+            recommender_object.save_model(folder_path = folder_path + "/" + self.RECOMMENDER_NAME)
+
+        self._print("Saving complete")
+    
+    def load_model(self, folder_path, file_name = None):
+
+        if file_name is None:
+            file_name = self.RECOMMENDER_NAME
+
+        self._print("Loading model from file '{}'".format(folder_path + file_name))
+
+        for recommender_object in self.recommenders_list:
+            recommender_object.load_model(folder_path = folder_path)
+        
+        self._print("Loading complete")
+            
 
 class PipelineStep(BaseRecommender):
     """Recommender as step of a Recommenders' pipeline"""
