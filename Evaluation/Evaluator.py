@@ -205,11 +205,13 @@ class Evaluator(object):
                  diversity_object = None,
                  ignore_items = None,
                  ignore_users = None,
+                 pipeline_mode = False,
                  verbose=True):
 
         super(Evaluator, self).__init__()
 
         self.verbose = verbose
+        self.pipeline_mode = pipeline_mode
 
         if ignore_items is None:
             self.ignore_items_flag = False
@@ -249,6 +251,16 @@ class Evaluator(object):
         self._start_time = np.nan
         self._start_time_print = np.nan
         self._n_users_evaluated = np.nan
+
+
+    def set_pipeline_mapping(self, mapping):
+        '''
+        pipeline_mapping is a mask  assigning a value of 0 to items that are not relevant (absent in URM_train but present 
+        in URM_test) and a value of 1 to items that are relevant (the only ones contained in URM_train).
+        
+        '''
+        self.pipeline_mapping = mapping
+        self.pipeline_mode = True
 
 
     def _print(self, string):
@@ -428,6 +440,7 @@ class EvaluatorHoldout(Evaluator):
                  diversity_object = None,
                  ignore_items = None,
                  ignore_users = None,
+                 pipeline_mode = False,
                  verbose=True):
 
 
@@ -435,6 +448,7 @@ class EvaluatorHoldout(Evaluator):
                                                diversity_object = diversity_object,
                                                min_ratings_per_user =min_ratings_per_user, exclude_seen=exclude_seen,
                                                ignore_items = ignore_items, ignore_users = ignore_users,
+                                               pipeline_mode = pipeline_mode,
                                                verbose = verbose)
 
 
@@ -485,6 +499,12 @@ class EvaluatorHoldout(Evaluator):
             # recommended_items_batch_list to a vector of the same length of the original (fill with zeros).
             # We already have the mapping when we compute the relevant items of the PipelineStep?
             # Maybe create a flag pipeline_mode= True
+            if self.pipeline_mode:
+                scores_batch_mapped = np.zeros(len(self.pipeline_mapping))
+                relevant_indices = np.where(self.pipeline_mapping == 1)[0]
+                scores_batch_mapped[relevant_indices] = scores_batch
+                scores_batch = scores_batch_mapped
+
 
             results_dict = self._compute_metrics_on_recommendation_list(test_user_batch_array = test_user_batch_array,
                                                          recommended_items_batch_list = recommended_items_batch_list,
