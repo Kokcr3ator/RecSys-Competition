@@ -262,7 +262,7 @@ class DataIO(object):
                 # Process the directory
                 for root, dirs, files in os.walk(current_temp_folder):
                     for file in files:
-                        print(file)
+                        self._print(file)
                         file_path = os.path.join(root, file)
                         file_extension = file.split(".")[-1]
                         attrib_name = file[:-len(file_extension) - 1]
