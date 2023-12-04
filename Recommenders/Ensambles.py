@@ -221,7 +221,7 @@ class PipelineStep(BaseRecommender):
 
     RECOMMENDER_NAME = "Pipeline_Step_Ensamble_Recommender_Class"
 
-    def __init__(self, URM_input, recommender_object, hyperparameters_dict, n_relevant_per_user= 200, verbose=True):
+    def __init__(self, URM_input, recommender_object, hyperparameters_dict= None, n_relevant_per_user= 200, verbose=True):
         super(PipelineStep, self).__init__(URM_input, verbose=verbose)
         self.URM_train = None
         self.URM_input = URM_input
@@ -244,8 +244,9 @@ class PipelineStep(BaseRecommender):
         self.merge_topPop = merge_topPop
         if self.merge_topPop:
             self.topPop_factor = topPop_factor
-
-        self.recommender_object.fit(**self.hyperparameters_dict)
+        if not self.hyperparameters_dict == None:
+            self.recommender_object.fit(**self.hyperparameters_dict)
+        else: print("No hyperparameters for fitting were provided. Check if the method is already fitted or provide an empty dict to use default hyperparameters.")
 
 
 
