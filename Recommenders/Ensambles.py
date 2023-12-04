@@ -347,14 +347,12 @@ class PipelineStep(BaseRecommender):
             return mask
         
         # Matrix mask for each user relevant_items_mask(i,j) = 1 if item j is relevant for user i, 0 otherwise
-
         relevant_items_mask = np.array([relevant_item_mask_single_user(relevant_items_single_user) for relevant_items_single_user in relevant_items_all_users])
 
         # Compute the logical or between all the rows
+        self.relevant_items = np.logical_or.reduce(relevant_items_mask)
 
-        relevant_items = np.logical_or.reduce(relevant_items_mask)
-
-        return relevant_items
+        return self.relevant_items
 
     
     
