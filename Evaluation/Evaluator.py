@@ -603,4 +603,3 @@ class EvaluatorNegativeItemSample(Evaluator):
 
 
         return results_dict
-
