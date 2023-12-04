@@ -259,10 +259,10 @@ class PipelineStep(BaseRecommender):
         scores_batch = self.recommender_object._compute_item_score(range(self.n_users))
 
         if self.merge_topPop:
-            n_items = self.URM_train.shape[1]
+            n_items = self.URM_input.shape[1]
 
             # Compute TopPop
-            item_popularity = np.ediff1d(self.URM_train.tocsc().indptr)
+            item_popularity = np.ediff1d(self.URM_input.tocsc().indptr)
             popular_items = np.argsort(item_popularity)
             popular_items = np.flip(popular_items, axis = 0)
                 
@@ -341,7 +341,7 @@ class PipelineStep(BaseRecommender):
             # Defining a function that for an array of relevant items of a user creates an array with length n_items 
             # with 1 if the item is relevant, 0 otherwise 
 
-            mask = np.zeros(self.URM_train.shape[1])
+            mask = np.zeros(self.URM_input.shape[1])
             mask[relevant_items_single_user] = 1
         
             return mask
