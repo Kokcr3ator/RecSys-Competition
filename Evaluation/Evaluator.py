@@ -480,6 +480,11 @@ class EvaluatorHoldout(Evaluator):
                                                                       remove_custom_items_flag=self.ignore_items_flag,
                                                                       return_scores = True
                                                                      )
+            
+            # TODO: Once you have created a mapping from URM_output to URM_train (item_id), here you should map 
+            # recommended_items_batch_list to a vector of the same length of the original (fill with zeros).
+            # We already have the mapping when we compute the relevant items of the PipelineStep?
+            # Maybe create a flag pipeline_mode= True
 
             results_dict = self._compute_metrics_on_recommendation_list(test_user_batch_array = test_user_batch_array,
                                                          recommended_items_batch_list = recommended_items_batch_list,
