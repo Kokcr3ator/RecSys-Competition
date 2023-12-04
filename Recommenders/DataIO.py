@@ -206,7 +206,6 @@ class DataIO(object):
     def load_data(self, file_name):
         # Check if the input is a directory
         is_directory = os.path.isdir(self.folder_path + "/" + file_name)
-        print(self.folder_path + "/" + file_name)
 
         if not is_directory and file_name[-4:] != ".zip":
             file_name += ".zip"
@@ -274,7 +273,7 @@ class DataIO(object):
                         elif file_extension == "npz":
                             attrib_data = sps.load_npz(file_path)
                         elif file_extension == "npy":
-                            attrib_data = np.load(file_path, allow_pickle=False)
+                            attrib_data = np.load(file_path, allow_pickle=True)
                         elif file_extension == "json":
                             with open(file_path, "r") as json_file:
                                 attrib_data = json.load(json_file)
