@@ -116,10 +116,13 @@ class BaseRecommender(object):
         scores_batch[:, self.items_to_ignore_ID] = -np.inf
         return scores_batch
     
+
+    
     def _remove_custom_items_per_user_on_scores(self, scores_batch): 
         for user_id in range(self.n_users):
-            scores_batch[user_id, self.items_to_ignore_ID_per_user] = -np.inf
+            scores_batch[user_id, self.items_to_ignore_ID_per_user[user_id]] = -np.inf
         return scores_batch
+
 
 
     def _remove_seen_on_scores(self, user_id, scores):
