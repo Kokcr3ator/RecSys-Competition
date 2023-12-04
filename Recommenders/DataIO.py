@@ -205,8 +205,8 @@ class DataIO(object):
 
     def load_data(self, file_name):
 
-        # if file_name[-4:] != ".zip":
-        #     file_name += ".zip"
+        if file_name[-4:] != ".zip":
+            file_name += ".zip"
 
         # dataFile = zipfile.ZipFile(self.folder_path + file_name)
 
