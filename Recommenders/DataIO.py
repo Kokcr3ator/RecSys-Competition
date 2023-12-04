@@ -204,73 +204,93 @@ class DataIO(object):
 
 
     def load_data(self, file_name):
+        # Check if the input is a directory
+        is_directory = os.path.isdir(file_name)
 
-        # if file_name[-4:] != ".zip":
-        #     file_name += ".zip"
+        if not is_directory and file_name[-4:] != ".zip":
+            file_name += ".zip"
 
-        dataFile = zipfile.ZipFile(self.folder_path + file_name)
-
-        dataFile.testzip()
-
-        current_temp_folder = self._get_temp_folder(file_name)
+        if is_directory:
+            current_temp_folder = file_name
+        else:
+            dataFile = zipfile.ZipFile(file_name)
+            dataFile.testzip()
+            current_temp_folder = self._get_temp_folder(file_name)
 
         try:
-
-            try:
-                data_format = dataFile.extract(".data_format.json", path = current_temp_folder)
-                with open(data_format, "r") as json_file:
-                    data_format = json.load(json_file)
-            except KeyError:
-                data_format = {}
-
-
             data_dict_loaded = {}
 
-            for file_name in dataFile.namelist():
+            if not is_directory:
+                try:
+                    data_format = dataFile.extract(".data_format.json", path=current_temp_folder)
+                    with open(data_format, "r") as json_file:
+                        data_format = json.load(json_file)
+                except KeyError:
+                    data_format = {}
 
-                # Discard auxiliary data structures
-                if file_name.startswith("."):
-                    continue
+                for file_name in dataFile.namelist():
+                    # Discard auxiliary data structures
+                    if file_name.startswith("."):
+                        continue
 
-                decompressed_file_path = dataFile.extract(file_name, path = current_temp_folder)
-                file_extension = file_name.split(".")[-1]
-                attrib_name = file_name[:-len(file_extension)-1]
+                    decompressed_file_path = dataFile.extract(file_name, path=current_temp_folder)
+                    file_extension = file_name.split(".")[-1]
+                    attrib_name = file_name[:-len(file_extension) - 1]
 
-                if file_extension == "csv":
-                    # Compatibility with previous version
-                    attrib_data = pd.read_csv(decompressed_file_path, index_col=False)
+                    if file_extension == "csv":
+                        attrib_data = pd.read_csv(decompressed_file_path, index_col=False)
+                    elif file_extension == "h5":
+                        attrib_data = pd.read_hdf(decompressed_file_path, key=None, mode='r')
+                    elif file_extension == "npz":
+                        attrib_data = sps.load_npz(decompressed_file_path)
+                    elif file_extension == "npy":
+                        attrib_data = np.load(decompressed_file_path, allow_pickle=False)
+                    elif file_extension == "zip":
+                        dataIO = DataIO(folder_path = current_temp_folder)
+                        attrib_data = dataIO.load_data(file_name = file_name)
+                    elif file_extension == "json":
+                        with open(decompressed_file_path, "r") as json_file:
+                            attrib_data = json.load(json_file)
+                    else:
+                        raise Exception(
+                            "Attribute type not recognized for: '{}' of class: '{}'".format(decompressed_file_path,
+                                                                                              file_extension))
 
-                elif file_extension == "h5":
-                    attrib_data = pd.read_hdf(decompressed_file_path, key=None, mode='r')
+                    data_dict_loaded[attrib_name] = attrib_data
 
-                elif file_extension == "npz":
-                    attrib_data = sps.load_npz(decompressed_file_path)
+            else:
+                # Process the directory
+                for root, dirs, files in os.walk(current_temp_folder):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        file_extension = file.split(".")[-1]
+                        attrib_name = file[:-len(file_extension) - 1]
 
-                elif file_extension == "npy":
-                    # allow_pickle is FALSE to prevent using pickle and ensure portability
-                    attrib_data = np.load(decompressed_file_path, allow_pickle=False)
+                        if file_extension == "csv":
+                            attrib_data = pd.read_csv(file_path, index_col=False)
+                        elif file_extension == "h5":
+                            attrib_data = pd.read_hdf(file_path, key=None, mode='r')
+                        elif file_extension == "npz":
+                            attrib_data = sps.load_npz(file_path)
+                        elif file_extension == "npy":
+                            attrib_data = np.load(file_path, allow_pickle=False)
+                        elif file_extension == "json":
+                            with open(file_path, "r") as json_file:
+                                attrib_data = json.load(json_file)
+                        else:
+                            raise Exception(
+                                "Attribute type not recognized for: '{}' of class: '{}'".format(file_path,
+                                                                                                  file_extension))
 
-                elif file_extension == "zip":
-                    dataIO = DataIO(folder_path = current_temp_folder)
-                    attrib_data = dataIO.load_data(file_name = file_name)
-
-                elif file_extension == "json":
-                    with open(decompressed_file_path, "r") as json_file:
-                        attrib_data = json.load(json_file)
-
-                else:
-                    raise Exception("Attribute type not recognized for: '{}' of class: '{}'".format(decompressed_file_path, file_extension))
-
-                data_dict_loaded[attrib_name] = attrib_data
-
+                        data_dict_loaded[attrib_name] = attrib_data
 
         except Exception as exec:
-
-            shutil.rmtree(current_temp_folder, ignore_errors=True)
+            if not is_directory:
+                shutil.rmtree(current_temp_folder, ignore_errors=True)
             raise exec
 
-        shutil.rmtree(current_temp_folder, ignore_errors=True)
-
+        if not is_directory:
+            shutil.rmtree(current_temp_folder, ignore_errors=True)
 
         return data_dict_loaded
 
