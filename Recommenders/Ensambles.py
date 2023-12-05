@@ -2,6 +2,7 @@ from Recommenders.BaseRecommender import BaseRecommender
 from Recommenders.DataIO import DataIO
 
 import numpy as np
+import pandas as pd
 
 
 class LinearCombination(BaseRecommender):
@@ -79,9 +80,18 @@ class LinearCombination(BaseRecommender):
 
         cutoff = min(cutoff, self.URM_train.shape[1] - 1)
 
+        # Map user_id_array and items_to_compute from original to preprocessed
+        if self.manage_cold_items:
+            inverse_item_mapping = pd.Series(self.item_mapping.index, index=self.item_mapping.values) # from orginal to preprocessed ID
+            items_to_compute = np.array(inverse_item_mapping.loc[items_to_compute].values)
+        
+        if self.manage_cold_users:
+            inverse_user_mapping = pd.Series(self.user_mapping.index, index = self.user_mapping.values)
+            user_id_array = np.array(inverse_user_mapping.loc[user_id_array].values)
+        
+        
         # Compute the scores using the model-specific function
         # Vectorize over all users in user_id_array
-
         scores_batch = self._compute_item_score(user_id_array, items_to_compute=items_to_compute)
 
         if self.merge_topPop:
