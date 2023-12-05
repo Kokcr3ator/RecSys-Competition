@@ -436,7 +436,7 @@ class EvaluatorHoldout(Evaluator):
 
     EVALUATOR_NAME = "EvaluatorHoldout"
 
-    def __init__(self, URM_test_list, cutoff_list, min_ratings_per_user=1, exclude_seen=True,
+    def __init__(self, URM_test_list, cutoff_list,original_URM_train = None, min_ratings_per_user=1, exclude_seen=True,
                  diversity_object = None,
                  ignore_items = None,
                  ignore_users = None,
@@ -445,6 +445,7 @@ class EvaluatorHoldout(Evaluator):
 
 
         super(EvaluatorHoldout, self).__init__(URM_test_list, cutoff_list,
+                                               original_URM_train = original_URM_train,
                                                diversity_object = diversity_object,
                                                min_ratings_per_user =min_ratings_per_user, exclude_seen=exclude_seen,
                                                ignore_items = ignore_items, ignore_users = ignore_users,
@@ -463,7 +464,7 @@ class EvaluatorHoldout(Evaluator):
 
         if self.original_URM_train is not None:
             URM_train = self.original_URM_train
-            
+
         else:
             URM_train = recommender_object.get_URM_train()
             
