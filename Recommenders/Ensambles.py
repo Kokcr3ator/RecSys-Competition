@@ -87,6 +87,9 @@ class LinearCombination(BaseRecommender):
         
         if self.manage_cold_users:
             inverse_user_mapping = pd.Series(self.user_mapping.index, index = self.user_mapping.values)
+            print(user_id_array)
+            print(user_id_array.shape)
+            print(type(user_id_array))
             user_id_array = np.array(inverse_user_mapping.loc[user_id_array].values)
         
         
