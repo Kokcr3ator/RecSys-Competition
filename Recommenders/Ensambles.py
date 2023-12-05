@@ -166,22 +166,26 @@ class LinearCombination(BaseRecommender):
             scores_batch[mask_cold, :] = np.array([scores_topPop for i in range(n_cold_items)])
             
             
-
+        print("scores_batch shape", scores_batch.shape)
         # Sorting is done in three steps. Faster then plain np.argsort for higher number of items
         # - Partition the data to extract the set of relevant items
         # - Sort only the relevant items
         # - Get the original item index
         # relevant_items_partition is block_size x cutoff
         relevant_items_partition = np.argpartition(-scores_batch, cutoff-1, axis=1)[:,0:cutoff]
-
+        print("relevant_items_partition shape", relevant_items_partition.shape )
         # Get original value and sort it
         # [:, None] adds 1 dimension to the array, from (block_size,) to (block_size,1)
         # This is done to correctly get scores_batch value as [row, relevant_items_partition[row,:]]
         relevant_items_partition_original_value = scores_batch[np.arange(scores_batch.shape[0])[:, None], relevant_items_partition]
+        print('relevant_items_partition_original_value shape', relevant_items_partition_original_value.shape)
         relevant_items_partition_sorting = np.argsort(-relevant_items_partition_original_value, axis=1)
+        print('relevant_items_partition_sorting shape', relevant_items_partition_sorting.shape)
         ranking = relevant_items_partition[np.arange(relevant_items_partition.shape[0])[:, None], relevant_items_partition_sorting]
+        print('ranking shape', ranking.shape)
 
         ranking_list = [None] * ranking.shape[0]
+        print('ranking_list shape ', ranking_list.shape)
 
         # Remove from the recommendation list any item that has a -inf score
         # Since -inf is a flag to indicate an item to remove
