@@ -201,7 +201,7 @@ class Evaluator(object):
 
     EVALUATOR_NAME = "Evaluator_Base_Class"
 
-    def __init__(self, URM_test, cutoff_list, min_ratings_per_user=1, exclude_seen=True,
+    def __init__(self, URM_test, cutoff_list, original_URM_train = None, min_ratings_per_user=1, exclude_seen=True,
                  diversity_object = None,
                  ignore_items = None,
                  ignore_users = None,
@@ -209,7 +209,7 @@ class Evaluator(object):
                  verbose=True):
 
         super(Evaluator, self).__init__()
-
+        self.original_URM_train = original_URM_train
         self.verbose = verbose
         self.pipeline_mode = pipeline_mode
 
@@ -461,10 +461,15 @@ class EvaluatorHoldout(Evaluator):
             # Reduce block size if estimated memory requirement exceeds 4 GB
             block_size = min([1000, int(4*1e9*8/64/self.n_items), len(users_to_evaluate)])
 
-
+        if self.original_URM_train is not None:
+            URM_train = self.original_URM_train
+            
+        else:
+            URM_train = recommender_object.get_URM_train()
+            
         results_dict = _create_empty_metrics_dict(self.cutoff_list,
                                                   self.n_items, self.n_users,
-                                                  recommender_object.get_URM_train(),
+                                                  URM_train,
                                                   self.URM_test,
                                                   self.ignore_items_ID,
                                                   self.ignore_users_ID,
