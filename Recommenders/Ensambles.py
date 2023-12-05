@@ -81,8 +81,7 @@ class LinearCombination(BaseRecommender):
         cutoff = min(cutoff, self.URM_train.shape[1] - 1)
 
         # Map user_id_array and items_to_compute from original to preprocessed
-        if self.manage_cold_items:
-            print(items_to_compute)
+        if self.manage_cold_items and items_to_compute is not None:
             inverse_item_mapping = pd.Series(self.item_mapping.index, index=self.item_mapping.values) # from orginal to preprocessed ID
             items_to_compute = np.array(inverse_item_mapping.loc[items_to_compute].values)
         
