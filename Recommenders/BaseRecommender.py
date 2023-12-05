@@ -35,6 +35,10 @@ class BaseRecommender(object):
 
         self._cold_user_mask = np.ediff1d(self.URM_train.indptr) == 0
 
+        self.manage_cold_items = False
+        self.manage_cold_users = False
+
+
         if self._cold_user_mask.any():
             self._print("URM Detected {} ({:4.1f}%) users with no interactions.".format(
                 self._cold_user_mask.sum(), self._cold_user_mask.sum()/self.n_users*100))
@@ -45,7 +49,16 @@ class BaseRecommender(object):
         if self._cold_item_mask.any():
             self._print("URM Detected {} ({:4.1f}%) items with no interactions.".format(
                 self._cold_item_mask.sum(), self._cold_item_mask.sum()/self.n_items*100))
+    
+    def set_item_mapping(self, mapping):
+        '''item_mapping is a pd.Series'''
+        self.item_mapping = mapping
+        self.manage_cold_items = True
 
+    def set_user_mapping(self, mapping):
+        '''item_mapping is a pd.Series'''
+        self.user_mapping = mapping
+        self.manage_cold_users = True
 
     def _get_cold_user_mask(self):
         return self._cold_user_mask
