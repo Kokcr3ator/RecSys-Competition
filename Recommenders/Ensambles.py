@@ -123,16 +123,16 @@ class LinearCombination(BaseRecommender):
             original_indices = np.array(self.item_mapping.values)
             mapped_indices = np.array(self.item_mapping.index)
             
-            scores_batch_mapped = np.zeros((scores_batch.shape[0], np.max(original_indices)), dtype=scores_batch.dtype)
-            scores_batch_mapped[:, (original_indices-1)] = scores_batch[:, mapped_indices]
+            scores_batch_mapped = np.zeros((scores_batch.shape[0], np.max(original_indices) +1 ), dtype=scores_batch.dtype)
+            scores_batch_mapped[:, original_indices] = scores_batch[:, mapped_indices]
             scores_batch = scores_batch_mapped
 
         if self.manage_cold_users:
             original_indices = np.array(self.user_mapping.values)
             mapped_indices = np.array(self.user_mapping.index)
 
-            scores_batch_mapped = np.zeros((np.max(original_indices), scores_batch.shape[1]), dtype=scores_batch.dtype)
-            scores_batch_mapped[(original_indices - 1), :] = scores_batch[mapped_indices, :]
+            scores_batch_mapped = np.zeros((np.max(original_indices) +1, scores_batch.shape[1]), dtype=scores_batch.dtype)
+            scores_batch_mapped[original_indices , :] = scores_batch[mapped_indices, :]
             scores_batch = scores_batch_mapped
 
             # ---------------------------------------------------------------------------------------------------------
