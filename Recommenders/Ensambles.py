@@ -185,7 +185,6 @@ class LinearCombination(BaseRecommender):
         print('ranking shape', ranking.shape)
 
         ranking_list = [None] * ranking.shape[0]
-        print('ranking_list shape ', ranking_list.shape)
 
         # Remove from the recommendation list any item that has a -inf score
         # Since -inf is a flag to indicate an item to remove
