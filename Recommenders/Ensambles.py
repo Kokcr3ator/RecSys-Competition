@@ -119,6 +119,54 @@ class LinearCombination(BaseRecommender):
         if remove_custom_items_flag:
             scores_batch = self._remove_custom_items_on_scores(scores_batch)
 
+        if self.manage_cold_items:
+            original_indices = np.array(self.item_mapping.values)
+            mapped_indices = np.array(self.item_mapping.index)
+            
+            scores_batch_mapped = np.zeros((scores_batch.shape[0], np.max(original_indices)), dtype=scores_batch.dtype)
+            scores_batch_mapped[:, original_indices] = scores_batch[:, mapped_indices]
+            scores_batch = scores_batch_mapped
+
+        if self.manage_cold_users:
+            original_indices = np.array(self.user_mapping.values)
+            mapped_indices = np.array(self.user_mapping.index)
+
+            scores_batch_mapped = np.zeros((np.max(original_indices), scores_batch.shape[1]), dtype=scores_batch.dtype)
+            scores_batch_mapped[original_indices, :] = scores_batch[mapped_indices, :]
+            scores_batch = scores_batch_mapped
+
+            # ---------------------------------------------------------------------------------------------------------
+            # Here we fill scores for cold items with TopPop scores
+            n_items_original = scores_batch.shape[1]
+
+            # Compute TopPop
+            item_popularity = np.ediff1d(self.URM_train.tocsc().indptr)
+            popular_items = np.argsort(item_popularity)
+            popular_items = np.flip(popular_items, axis = 0)
+            
+            if self.manage_cold_items:
+                popular_items = np.array(self.item_mapping.loc[popular_items].values) # map popular items to original IDs
+                
+            # positions array is a vector containing the positions (from 1 to n_items)
+            positions = np.arange(n_items_original)
+            positions +=1
+
+            # Create mapping to associate the position to the item_id
+            map_index_position = {popular_items[i]:positions[i] for i in range(n_items_original)}
+
+            # Compute TopPop scores
+            scores_topPop = np.zeros(n_items_original)
+            for item_id in popular_items:
+                scores_topPop[item_id] = (n_items_original - map_index_position[item_id] )/(n_items_original)
+
+            # Mask cold users (1=cold)
+            mask_cold = [np.all(scores_batch[user_id, :] == 0) for user_id in np.range(scores_batch.shape[0])]
+            n_cold_items = np.sum(mask_cold)
+            
+            scores_batch[mask_cold, :] = np.array([scores_topPop for i in range(n_cold_items)])
+            
+            
+
         # Sorting is done in three steps. Faster then plain np.argsort for higher number of items
         # - Partition the data to extract the set of relevant items
         # - Sort only the relevant items
@@ -213,6 +261,7 @@ class LinearCombination(BaseRecommender):
     
     def set_topPop_factor(self, topPop_factor):
         self.topPop_factor = topPop_factor
+
 
             
 
@@ -323,7 +372,6 @@ class PipelineStep(BaseRecommender):
 
         else:
             return ranking_list
-        
 
         
     def compute_relevant_items(self, at= 200):
