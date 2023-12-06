@@ -53,12 +53,14 @@ class BaseRecommender(object):
     def set_item_mapping(self, mapping):
         '''item_mapping is a pd.Series'''
         self.item_mapping = mapping
+        self.PtO_item_mapping = self.item_mapping # 'Preprocessed to Original' mapping, for readability
         self.manage_cold_items = True
         self.n_items = np.max(self.item_mapping.values) + 1
 
     def set_user_mapping(self, mapping):
         '''item_mapping is a pd.Series'''
         self.user_mapping = mapping
+        self.PtO_user_mapping = self.user_mapping # 'Preprocessed to Original' mapping, for readability
         self.manage_cold_users = True
         self.n_users = np.max(self.user_mapping.values) + 1
 
@@ -146,7 +148,7 @@ class BaseRecommender(object):
 
         seen = self.URM_train.indices[self.URM_train.indptr[user_id]:self.URM_train.indptr[user_id + 1]]
         if(self.manage_cold_items):
-            seen = np.array(self.item_mapping.loc[seen].values)
+            seen = np.array(self.PtO_item_mapping.loc[seen].values)
 
         scores[seen] = -np.inf
         return scores

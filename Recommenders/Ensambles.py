@@ -82,13 +82,13 @@ class LinearCombination(BaseRecommender):
 
         # Map user_id_array and items_to_compute from original to preprocessed
         if self.manage_cold_items:
-            inverse_item_mapping = pd.Series(self.item_mapping.index, index=self.item_mapping.values) # from orginal to preprocessed ID
+            OtP_item_mapping = pd.Series(self.PtO_item_mapping.index, index=self.PtO_item_mapping.values) # from orginal to preprocessed ID
             if items_to_compute is not None:
-                items_to_compute = np.array(inverse_item_mapping.loc[items_to_compute].values)
+                items_to_compute = np.array(OtP_item_mapping.loc[items_to_compute].values) # preprocessed items id
         
         if self.manage_cold_users:
             # Distinguish between cold and non-cold (here referenced with 'hot') users
-            hot_mask = np.array([np.isin(user_id, self.user_mapping.values) for user_id in user_id_array])
+            hot_mask = np.array([np.isin(user_id, self.PtO_user_mapping.values) for user_id in user_id_array]) # check if user_id is in original ids
             cold_mask = np.logical_not(hot_mask)
 
             hot_users_id_array = user_id_array[hot_mask]
@@ -99,7 +99,7 @@ class LinearCombination(BaseRecommender):
             popular_items = np.flip(popular_items, axis = 0)
             
             if self.manage_cold_items:
-                popular_items = np.array(self.item_mapping.loc[popular_items].values) # map popular items to original IDs
+                popular_items = np.array(self.PtO_item_mapping.loc[popular_items].values) # map popular items to original IDs
                 
             # positions array is a vector containing the positions (from 1 to n_items)
             positions = np.arange(len(popular_items))
@@ -115,14 +115,14 @@ class LinearCombination(BaseRecommender):
 
 
             # Map hot users ids from original to preprocessed representation, in order to feed _compute_item_score()
-            inverse_user_mapping = pd.Series(self.user_mapping.index, index = self.user_mapping.values)
-            hot_users_id_array_preprocessed = np.array(inverse_user_mapping.loc[hot_users_id_array].values)
+            OtP_user_mapping = pd.Series(self.user_mapping.index, index = self.user_mapping.values)
+            hot_users_id_array_preprocessed = np.array(OtP_user_mapping.loc[hot_users_id_array].values)
 
             # Compute scores for hot users using _compute_item_score() and fill the scores_batch
-            scores_batch = - np.ones((len(user_id_array), self.n_items ), dtype=np.float32) * np.inf
+            scores_batch = - np.ones((len(user_id_array), self.n_items), dtype=np.float32) * np.inf
             if self.manage_cold_items:
                 scores_batch = write_ndarray_with_mask(scores_batch, 
-                                                       hot_mask, self.item_mapping.values, 
+                                                       hot_mask, self.PtO_item_mapping.values, 
                                                        self._compute_item_score(hot_users_id_array_preprocessed, 
                                                                                 items_to_compute=items_to_compute))
             else:
@@ -138,36 +138,42 @@ class LinearCombination(BaseRecommender):
             # Vectorize over all users in user_id_array
             if self.manage_cold_items:
                 scores_batch = - np.ones((len(user_id_array), self.n_items), dtype=np.float32) * np.inf
-                scores_batch[:, self.item_mapping.values] = self._compute_item_score(user_id_array, items_to_compute=items_to_compute)
+                scores_batch[:, self.PtO_item_mapping.values] = self._compute_item_score(user_id_array, items_to_compute=items_to_compute)
             else:
                 scores_batch = self._compute_item_score(user_id_array, items_to_compute=items_to_compute)
 
         if self.merge_topPop:
-            n_items = self.URM_train.shape[1]
+            if items_to_compute is not None:
+                n_items = len(items_to_compute)
+            else:
+                n_items = self.n_items
 
             # Compute TopPop
             item_popularity = np.ediff1d(self.URM_train.tocsc().indptr)
             popular_items = np.argsort(item_popularity)
             popular_items = np.flip(popular_items, axis = 0)
+
+            if self.manage_cold_items:
+                popular_items = np.array(self.PtO_item_mapping.loc[popular_items].values) # map popular items to original IDs
                 
             # positions array is a vector containing the positions (from 1 to n_items)
-            positions = np.arange(n_items)
+            positions = np.arange(len(popular_items))
             positions +=1
 
             # Create mapping to associate the position to the item_id
-            map_index_position = {popular_items[i]:positions[i] for i in range(len(positions))}
+            map_index_position = {popular_items[i]:positions[i] for i in range(len(popular_items))}
             
             # Apply the column-wise operation : score = score + topPop_factor*(n_items - position)/ n_items
             def popularity_add(column, index):
                 return column + self.topPop_factor*((n_items - map_index_position[index] )/(n_items)) 
-                
+            
             scores_batch = np.array([popularity_add(scores_batch[:, i], i) for i in range(n_items)]).T
 
         for user_index in range(len(user_id_array)):
 
             user_id = user_id_array[user_index]
             if self.manage_cold_users:
-                user_id = inverse_user_mapping.loc[user_id]
+                user_id = OtP_user_mapping.loc[user_id]
 
             if remove_seen_flag:
                 scores_batch[user_index,:] = self._remove_seen_on_scores(user_id, scores_batch[user_index, :])
