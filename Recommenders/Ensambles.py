@@ -125,6 +125,7 @@ class LinearCombination(BaseRecommender):
                                                                                 items_to_compute=items_to_compute))
             else:
                 scores_batch[hot_mask, :] = self._compute_item_score(hot_users_id_array_preprocessed, items_to_compute=items_to_compute)
+            print(cold_mask)
             scores_batch[cold_mask, :] = np.array([scores_topPop for i in range(np.sum(cold_mask))])
         
         else:
