@@ -165,6 +165,8 @@ class LinearCombination(BaseRecommender):
         for user_index in range(len(user_id_array)):
 
             user_id = user_id_array[user_index]
+            if self.manage_cold_items:
+                user_id = inverse_user_mapping.loc[user_id]
 
             if remove_seen_flag:
                 scores_batch[user_index,:] = self._remove_seen_on_scores(user_id, scores_batch[user_index, :])
