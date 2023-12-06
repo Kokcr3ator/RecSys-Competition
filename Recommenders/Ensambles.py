@@ -1,7 +1,6 @@
 from Recommenders.BaseRecommender import BaseRecommender
 from Recommenders.DataIO import DataIO
-from Utils.write_ndarray_with_mask  import write_ndarray_with_mask
-
+from Utils.write_ndarray_with_mask import write_ndarray_with_mask
 import numpy as np
 import pandas as pd
 
@@ -120,10 +119,10 @@ class LinearCombination(BaseRecommender):
             # Compute scores for hot users using _compute_item_score() and fill the scores_batch
             scores_batch = - np.ones((len(user_id_array), self.n_items ), dtype=np.float32) * np.inf
             if self.manage_cold_items:
-                write_ndarray_with_mask(scores_batch, 
-                                        hot_mask, self.item_mapping.values, 
-                                        self._compute_item_scores(hot_users_id_array_preprocessed, items_to_compute=items_to_compute)) 
-                
+                scores_batch = write_ndarray_with_mask(scores_batch, 
+                                                       hot_mask, self.item_mapping.values, 
+                                                       self._compute_item_score(hot_users_id_array_preprocessed, 
+                                                                                items_to_compute=items_to_compute))
             else:
                 scores_batch[hot_mask, :] = self._compute_item_score(hot_users_id_array_preprocessed, items_to_compute=items_to_compute)
             scores_batch[cold_mask, :] = np.array([scores_topPop for i in range(np.sum(cold_mask))])
