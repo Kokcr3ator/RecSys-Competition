@@ -140,11 +140,14 @@ class BaseRecommender(object):
 
 
 
-    def _remove_seen_on_scores(self, user_id, scores):
+    def _remove_seen_on_scores(self, user_id, scores, inverse_item_mapping = None):
 
         assert self.URM_train.getformat() == "csr", "Recommender_Base_Class: URM_train is not CSR, this will cause errors in filtering seen items"
 
         seen = self.URM_train.indices[self.URM_train.indptr[user_id]:self.URM_train.indptr[user_id + 1]]
+        if(self.manage_cold_items):
+            if inverse_item_mapping is not None:
+                seen = np.array(inverse_item_mapping.loc[seen].values)
 
         scores[seen] = -np.inf
         return scores

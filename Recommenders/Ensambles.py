@@ -169,8 +169,10 @@ class LinearCombination(BaseRecommender):
                 user_id = inverse_user_mapping.loc[user_id]
 
             if remove_seen_flag:
-                scores_batch[user_index,:] = self._remove_seen_on_scores(user_id, scores_batch[user_index, :])
-
+                if self.manage_cold_items:
+                    scores_batch[user_index,:] = self._remove_seen_on_scores(user_id, scores_batch[user_index, :], inverse_item_mapping = inverse_item_mapping)
+                else:
+                    scores_batch[user_index,:] = self._remove_seen_on_scores(user_id, scores_batch[user_index, :])
 
         if remove_top_pop_flag:
             scores_batch = self._remove_TopPop_on_scores(scores_batch)
