@@ -166,7 +166,7 @@ class LinearCombination(BaseRecommender):
         for user_index in range(len(user_id_array)):
 
             user_id = user_id_array[user_index]
-            if self.manage_cold_items:
+            if self.manage_cold_users:
                 user_id = inverse_user_mapping.loc[user_id]
 
             if remove_seen_flag:
