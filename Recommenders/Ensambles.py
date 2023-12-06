@@ -107,7 +107,7 @@ class LinearCombination(BaseRecommender):
             map_index_position = {popular_items[i]:positions[i] for i in range(len(popular_items))}
 
             # Compute TopPop scores
-            scores_topPop = - np.ones(self.n_items + 1, dtype=np.float32) * np.inf
+            scores_topPop = - np.ones(self.n_items , dtype=np.float32) * np.inf
             for item_id in popular_items:
                 scores_topPop[item_id] = (self.n_items - map_index_position[item_id])/(self.n_items)
 
@@ -117,7 +117,7 @@ class LinearCombination(BaseRecommender):
             hot_users_id_array_preprocessed = np.array(inverse_user_mapping.loc[hot_users_id_array].values)
 
             # Compute scores for hot users using _compute_item_scores() and fill the scores_batch
-            scores_batch = - np.ones((len(user_id_array), self.n_items), dtype=np.float32) * np.inf
+            scores_batch = - np.ones((len(user_id_array), self.n_items ), dtype=np.float32) * np.inf
             if self.manage_cold_items:
                 scores_batch[hot_mask, self.item_mapping.values] = self._compute_item_scores(hot_users_id_array_preprocessed, items_to_compute=items_to_compute)
             else:

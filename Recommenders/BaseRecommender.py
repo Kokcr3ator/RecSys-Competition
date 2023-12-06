@@ -54,13 +54,13 @@ class BaseRecommender(object):
         '''item_mapping is a pd.Series'''
         self.item_mapping = mapping
         self.manage_cold_items = True
-        self.n_items = np.max(self.item_mapping.values)
+        self.n_items = np.max(self.item_mapping.values) + 1
 
     def set_user_mapping(self, mapping):
         '''item_mapping is a pd.Series'''
         self.user_mapping = mapping
         self.manage_cold_users = True
-        self.n_users = np.max(self.user_mapping.values)
+        self.n_users = np.max(self.user_mapping.values) + 1
 
     def _get_cold_user_mask(self):
         return self._cold_user_mask
