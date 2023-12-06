@@ -20,8 +20,6 @@ class LinearCombination(BaseRecommender):
             self.weights_list = [1/self.n_recommenders] * self.n_recommenders # uniform weights if not specified
         else: self.weights_list = weights_list
 
-        self.merge_topPop = False
-        self.topPop_factor = 0.0
           
 
     def fit(self, merge_topPop= False, topPop_factor= 1e-6):
@@ -88,16 +86,52 @@ class LinearCombination(BaseRecommender):
             items_to_compute = np.array(inverse_item_mapping.loc[items_to_compute].values)
         
         if self.manage_cold_users:
+            # Distinguish between cold and non-cold (here referenced with 'hot') users
+            hot_mask = np.array([np.isin(user_id, self.user_mapping.values) for user_id in user_id_array])
+            cold_mask = np.logical_not(hot_mask)
+            hot_users_id_array = user_id_array[hot_mask]
+
+            # Compute cold users score using TopPop
+            item_popularity = np.ediff1d(self.URM_train.tocsc().indptr)
+            popular_items = np.argsort(item_popularity)
+            popular_items = np.flip(popular_items, axis = 0)
+            
+            if self.manage_cold_items:
+                popular_items = np.array(self.item_mapping.loc[popular_items].values) # map popular items to original IDs
+                
+            # positions array is a vector containing the positions (from 1 to n_items)
+            positions = np.arange(len(popular_items))
+            positions +=1
+
+            # Create mapping to associate the position to the item_id
+            map_index_position = {popular_items[i]:positions[i] for i in range(len(popular_items))}
+
+            # Compute TopPop scores
+            scores_topPop = - np.ones(self.n_items, dtype=np.float32) * np.inf
+            for item_id in popular_items:
+                scores_topPop[item_id] = (self.n_items - map_index_position[item_id])/(self.n_items)
+
+
+            # Map hot users ids from original to preprocessed representation, in order to feed _compute_item_score()
             inverse_user_mapping = pd.Series(self.user_mapping.index, index = self.user_mapping.values)
-            print(user_id_array)
-            print(user_id_array.shape)
-            print(type(user_id_array))
-            user_id_array = np.array(inverse_user_mapping.loc[user_id_array].values)
+            hot_users_id_array_preprocessed = np.array(inverse_user_mapping.loc[hot_users_id_array].values)
+
+            # Compute scores for hot users using _compute_item_scores() and fill the scores_batch
+            scores_batch = - np.ones((len(user_id_array), self.n_items), dtype=np.float32) * np.inf
+            if self.manage_cold_items:
+                scores_batch[hot_mask, self.item_mapping.values] = self._compute_item_scores(hot_users_id_array_preprocessed, items_to_compute=items_to_compute)
+            else:
+                scores_batch[hot_mask, :] = self._compute_item_scores(hot_users_id_array_preprocessed, items_to_compute=items_to_compute)
+            scores_batch[cold_mask, :] = np.array([scores_topPop for i in range(np.sum(cold_mask))])
         
-        
-        # Compute the scores using the model-specific function
-        # Vectorize over all users in user_id_array
-        scores_batch = self._compute_item_score(user_id_array, items_to_compute=items_to_compute)
+        else:
+            # Compute the scores using the model-specific function
+            # Vectorize over all users in user_id_array
+            if self.manage_cold_items:
+                scores_batch = - np.ones((len(user_id_array), self.n_items), dtype=np.float32) * np.inf
+                scores_batch[:, self.item_mapping.values] = self._compute_item_scores(user_id_array, items_to_compute=items_to_compute)
+            else:
+                scores_batch = self._compute_item_score(user_id_array, items_to_compute=items_to_compute)
 
         if self.merge_topPop:
             n_items = self.URM_train.shape[1]
@@ -133,72 +167,22 @@ class LinearCombination(BaseRecommender):
 
         if remove_custom_items_flag:
             scores_batch = self._remove_custom_items_on_scores(scores_batch)
-
-        if self.manage_cold_items:
-            original_indices = np.array(self.item_mapping.values)
-            mapped_indices = np.array(self.item_mapping.index)
+      
             
-            scores_batch_mapped = np.zeros((scores_batch.shape[0], np.max(original_indices) +1 ), dtype=scores_batch.dtype)
-            scores_batch_mapped[:, original_indices] = scores_batch[:, mapped_indices]
-            scores_batch = scores_batch_mapped
-
-        if self.manage_cold_users:
-            original_indices = np.array(self.user_mapping.values)
-            mapped_indices = np.array(self.user_mapping.index)
-
-            scores_batch_mapped = np.zeros((np.max(original_indices) +1, scores_batch.shape[1]), dtype=scores_batch.dtype)
-            scores_batch_mapped[original_indices , :] = scores_batch[mapped_indices, :]
-            scores_batch = scores_batch_mapped
-
-            # ---------------------------------------------------------------------------------------------------------
-            # Here we fill scores for cold items with TopPop scores
-            n_items_original = scores_batch.shape[1]
-
-            # Compute TopPop
-            item_popularity = np.ediff1d(self.URM_train.tocsc().indptr)
-            popular_items = np.argsort(item_popularity)
-            popular_items = np.flip(popular_items, axis = 0)
-            
-            if self.manage_cold_items:
-                popular_items = np.array(self.item_mapping.loc[popular_items].values) # map popular items to original IDs
-                
-            # positions array is a vector containing the positions (from 1 to n_items)
-            positions = np.arange(n_items_original)
-            positions +=1
-
-            # Create mapping to associate the position to the item_id
-            map_index_position = {popular_items[i]:positions[i] for i in range(n_items_original)}
-
-            # Compute TopPop scores
-            scores_topPop = np.zeros(n_items_original)
-            for item_id in popular_items:
-                scores_topPop[item_id] = (n_items_original - map_index_position[item_id] )/(n_items_original)
-
-            # Mask cold users (1=cold)
-            mask_cold = [np.all(scores_batch[user_id, :] == 0) for user_id in np.range(scores_batch.shape[0])]
-            n_cold_items = np.sum(mask_cold)
-            
-            scores_batch[mask_cold, :] = np.array([scores_topPop for i in range(n_cold_items)])
-            
-            
-        print("scores_batch shape", scores_batch.shape)
         # Sorting is done in three steps. Faster then plain np.argsort for higher number of items
         # - Partition the data to extract the set of relevant items
         # - Sort only the relevant items
         # - Get the original item index
         # relevant_items_partition is block_size x cutoff
         relevant_items_partition = np.argpartition(-scores_batch, cutoff-1, axis=1)[:,0:cutoff]
-        print("relevant_items_partition shape", relevant_items_partition.shape )
+
         # Get original value and sort it
         # [:, None] adds 1 dimension to the array, from (block_size,) to (block_size,1)
         # This is done to correctly get scores_batch value as [row, relevant_items_partition[row,:]]
         relevant_items_partition_original_value = scores_batch[np.arange(scores_batch.shape[0])[:, None], relevant_items_partition]
-        print('relevant_items_partition_original_value shape', relevant_items_partition_original_value.shape)
         relevant_items_partition_sorting = np.argsort(-relevant_items_partition_original_value, axis=1)
-        print('relevant_items_partition_sorting shape', relevant_items_partition_sorting.shape)
         ranking = relevant_items_partition[np.arange(relevant_items_partition.shape[0])[:, None], relevant_items_partition_sorting]
-        print('ranking shape', ranking.shape)
-
+        
         ranking_list = [None] * ranking.shape[0]
 
         # Remove from the recommendation list any item that has a -inf score
