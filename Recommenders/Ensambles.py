@@ -88,8 +88,17 @@ class LinearCombination(BaseRecommender):
         if self.manage_cold_users:
             # Distinguish between cold and non-cold (here referenced with 'hot') users
             hot_mask = np.array([np.isin(user_id, self.user_mapping.values) for user_id in user_id_array])
+            print("self.user_mapping.values")
+            print(self.user_mapping.values)
+            print('user_id_array')
+            print(user_id_array)
+            print("hotmask")
+            print(hot_mask)
             cold_mask = np.logical_not(hot_mask)
+
             hot_users_id_array = user_id_array[hot_mask]
+            print("hot_users_id_array")
+            print(hot_users_id_array)
 
             # Compute cold users score using TopPop
             item_popularity = np.ediff1d(self.URM_train.tocsc().indptr)
