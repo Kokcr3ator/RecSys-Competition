@@ -107,7 +107,7 @@ class LinearCombination(BaseRecommender):
             map_index_position = {popular_items[i]:positions[i] for i in range(len(popular_items))}
 
             # Compute TopPop scores
-            scores_topPop = - np.ones(self.n_items, dtype=np.float32) * np.inf
+            scores_topPop = - np.ones(self.n_items + 1, dtype=np.float32) * np.inf
             for item_id in popular_items:
                 scores_topPop[item_id] = (self.n_items - map_index_position[item_id])/(self.n_items)
 
