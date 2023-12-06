@@ -108,7 +108,7 @@ class LinearCombination(BaseRecommender):
             map_index_position = {popular_items[i]:positions[i] for i in range(len(popular_items))}
 
             # Compute TopPop scores
-            scores_topPop = - np.ones(self.n_items, dtype=np.float32) * np.inf
+            scores_topPop = - np.ones(self.n_items , dtype=np.float32) * np.inf
             for item_id in popular_items:
                 scores_topPop[item_id] = (self.n_items - map_index_position[item_id])/(self.n_items)
 
@@ -117,15 +117,15 @@ class LinearCombination(BaseRecommender):
             inverse_user_mapping = pd.Series(self.user_mapping.index, index = self.user_mapping.values)
             hot_users_id_array_preprocessed = np.array(inverse_user_mapping.loc[hot_users_id_array].values)
 
-            # Compute scores for hot users using _compute_item_scores() and fill the scores_batch
-            scores_batch = - np.ones((len(user_id_array), self.n_items), dtype=np.float32) * np.inf
+            # Compute scores for hot users using _compute_item_score() and fill the scores_batch
+            scores_batch = - np.ones((len(user_id_array), self.n_items ), dtype=np.float32) * np.inf
             if self.manage_cold_items:
                 write_ndarray_with_mask(scores_batch, 
                                         hot_mask, self.item_mapping.values, 
                                         self._compute_item_scores(hot_users_id_array_preprocessed, items_to_compute=items_to_compute)) 
                 
             else:
-                scores_batch[hot_mask, :] = self._compute_item_scores(hot_users_id_array_preprocessed, items_to_compute=items_to_compute)
+                scores_batch[hot_mask, :] = self._compute_item_score(hot_users_id_array_preprocessed, items_to_compute=items_to_compute)
             scores_batch[cold_mask, :] = np.array([scores_topPop for i in range(np.sum(cold_mask))])
         
         else:
@@ -133,7 +133,7 @@ class LinearCombination(BaseRecommender):
             # Vectorize over all users in user_id_array
             if self.manage_cold_items:
                 scores_batch = - np.ones((len(user_id_array), self.n_items), dtype=np.float32) * np.inf
-                scores_batch[:, self.item_mapping.values] = self._compute_item_scores(user_id_array, items_to_compute=items_to_compute)
+                scores_batch[:, self.item_mapping.values] = self._compute_item_score(user_id_array, items_to_compute=items_to_compute)
             else:
                 scores_batch = self._compute_item_score(user_id_array, items_to_compute=items_to_compute)
 
