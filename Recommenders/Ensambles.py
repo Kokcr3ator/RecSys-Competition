@@ -167,7 +167,8 @@ class LinearCombination(BaseRecommender):
             def popularity_add(column, index):
                 return column + self.topPop_factor*((n_items - map_index_position[index] )/(n_items)) 
             
-            scores_batch = np.array([popularity_add(scores_batch[:, item], item) for item in popular_items]).T
+            scores_batch_pop = np.array([popularity_add(scores_batch[:, item], item) for item in popular_items]).T
+            scores_batch[:, popular_items] = scores_batch_pop 
 
         for user_index in range(len(user_id_array)):
 
