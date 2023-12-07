@@ -1,8 +1,10 @@
 from Recommenders.BaseRecommender import BaseRecommender
 from Recommenders.DataIO import DataIO
 from Utils.write_ndarray_with_mask import write_ndarray_with_mask
+
 import numpy as np
 import pandas as pd
+from sklearn.preprocessing import MinMaxScaler
 
 
 class LinearCombination(BaseRecommender):
@@ -51,6 +53,15 @@ class LinearCombination(BaseRecommender):
         # For each Recommender object we compute the scores and store them in scores_batch_array
         scores_batch_array = np.array([recommender_object._compute_item_score(user_id_array, items_to_compute=items_to_compute) 
                                        for recommender_object in self.recommenders_list])
+        
+        # Normalize each row (the scores attribted by each Recommender in the Ensamble)
+        scaler = MinMaxScaler(feature_range=(-1, 1))
+
+        for i in range(scores_batch_array.shape[0]):
+            row = scores_batch_array[i, :]
+            row = row.reshape(-1, 1)  # Reshape to (n_samples, 1) as fit_transform expects 2D input
+            normalized_row = scaler.fit_transform(row).flatten()
+            scores_batch_array[i, :] = normalized_row
         
         # Now compute the ensamble scores by calculating a weighted average over the scores of each Recommender
         scores_batch = np.average(scores_batch_array, axis= 0, weights= self.weights_list)
