@@ -320,9 +320,9 @@ class PipelineStep(BaseRecommender):
 
     def set_previous_pipelineStep_mapping(self, previous_pipelineStep_relevant_items):
         self.manage_previous_pipelineStep = True
-        # from pipeline to original mapping
-        self.pipelineStep_mapping = pd.Series(previous_pipelineStep_relevant_items, # original
-                                              index= np.arange(len(previous_pipelineStep_relevant_items))) # pipeline
+        # from original to pipeline mapping
+        self.pipelineStep_mapping = pd.Series(np.arange(len(previous_pipelineStep_relevant_items)), # pipeline
+                                              index= previous_pipelineStep_relevant_items) # original
         self.n_items = len(self.previous_pipelineStep_relevant_items)
         
 
@@ -334,16 +334,14 @@ class PipelineStep(BaseRecommender):
         cutoff = min(cutoff, self.URM_input.shape[1] - 1)     
 
         if user_id_array is None:
-            user_id_array = np.arange(self.n_users)   
+            user_id_array = np.arange(self.n_users)  
         
         if self.manage_cold_items:
-            inverse_pipelineStep_mapping = pd.Series(self.PtO_item_mapping.index, 
-                                                     index=self.PtO_item_mapping.values) # from orginal to pipeline ID
             if items_to_compute is not None:
-                items_to_compute = np.array(inverse_pipelineStep_mapping.loc[items_to_compute].values) # preprocessed items id
+                items_to_compute = np.array(self.pipelineStep_mapping.loc[items_to_compute].values) # pipeline items id
 
             scores_batch = - np.ones((len(user_id_array), self.n_items), dtype=np.float32) * np.inf
-            scores_batch[:, items_to_compute] = self._compute_item_score(user_id_array, items_to_compute=items_to_compute)
+            scores_batch[:, items_to_compute] = self.recommender_object._compute_item_score(user_id_array, items_to_compute=items_to_compute)
         
         else: scores_batch = self.recommender_object._compute_item_score(user_id_array)
 
