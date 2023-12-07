@@ -337,14 +337,14 @@ class PipelineStep(BaseRecommender):
         if user_id_array is None:
             user_id_array = np.arange(self.n_users)  
         
-        if self.manage_cold_items:
+        if self.manage_previous_pipelineStep:
             if items_to_compute is not None:
                 items_to_compute = np.array(self.pipelineStep_mapping.loc[items_to_compute].values) # pipeline items id
 
             scores_batch = - np.ones((len(user_id_array), self.n_items), dtype=np.float32) * np.inf
             scores_batch[:, items_to_compute] = self.recommender_object._compute_item_score(user_id_array, items_to_compute=items_to_compute)
         
-        else: scores_batch = self.recommender_object._compute_item_score(user_id_array)
+        else: scores_batch = self.recommender_object._compute_item_score(user_id_array, items_to_compute=items_to_compute)
 
         if self.merge_topPop:
             n_items = self.URM_input.shape[1]
