@@ -318,14 +318,34 @@ class PipelineStep(BaseRecommender):
         else: print("No hyperparameters for fitting were provided. Check if the method is already fitted or provide an empty dict to use default hyperparameters.")
 
 
+    def set_previous_pipelineStep_mapping(self, previous_pipelineStep_relevant_items):
+        self.manage_previous_pipelineStep = True
+        # from pipeline to original mapping
+        self.pipelineStep_mapping = pd.Series(previous_pipelineStep_relevant_items, # original
+                                              index= np.arange(len(previous_pipelineStep_relevant_items))) # pipeline
+        self.n_items = len(self.previous_pipelineStep_relevant_items)
+        
 
-    def recommend(self, cutoff = None, remove_zero_scores= True, return_scores = True):
+
+    def recommend(self, user_id_array= None, cutoff = None, remove_zero_scores= True, return_scores = True):
         '''Custom recommend() method. No option for removing seen items (no point in deleting the ones in the URM_output).'''
         if cutoff is None:
             cutoff = self.URM_input.shape[1] - 1
-        cutoff = min(cutoff, self.URM_input.shape[1] - 1)
+        cutoff = min(cutoff, self.URM_input.shape[1] - 1)     
+
+        if user_id_array is None:
+            user_id_array = np.arange(self.n_users)   
         
-        scores_batch = self.recommender_object._compute_item_score(range(self.n_users))
+        if self.manage_cold_items:
+            inverse_pipelineStep_mapping = pd.Series(self.PtO_item_mapping.index, 
+                                                     index=self.PtO_item_mapping.values) # from orginal to pipeline ID
+            if items_to_compute is not None:
+                items_to_compute = np.array(inverse_pipelineStep_mapping.loc[items_to_compute].values) # preprocessed items id
+
+            scores_batch = - np.ones((len(user_id_array), self.n_items), dtype=np.float32) * np.inf
+            scores_batch[:, items_to_compute] = self._compute_item_score(user_id_array, items_to_compute=items_to_compute)
+        
+        else: scores_batch = self.recommender_object._compute_item_score(user_id_array)
 
         if self.merge_topPop:
             n_items = self.URM_input.shape[1]
@@ -394,7 +414,7 @@ class PipelineStep(BaseRecommender):
             return ranking_list
 
         
-    def compute_relevant_items(self, at= 200):
+    def compute_relevant_items(self, at= 200, return_ids= False):
 
         '''
         Computes the union of relevant items for all the users.
@@ -402,8 +422,8 @@ class PipelineStep(BaseRecommender):
 
         '''
 
-        relevant_items_all_users = self.recommend(cutoff = at, remove_zero_scores= True, return_scores = False)
-        self.relevant_items_per_user = relevant_items_all_users
+        relevant_items_per_users = self.recommend(cutoff = at, remove_zero_scores= True, return_scores = False)
+        self.relevant_items_per_user = relevant_items_per_users
 
         def relevant_item_mask_single_user(relevant_items_single_user):
             # Defining a function that for an array of relevant items of a user creates an array with length n_items 
@@ -418,9 +438,15 @@ class PipelineStep(BaseRecommender):
         relevant_items_mask = np.array([relevant_item_mask_single_user(relevant_items_single_user) for relevant_items_single_user in relevant_items_all_users])
 
         # Compute the logical or between all the rows
-        self.relevant_items = np.logical_or.reduce(relevant_items_mask)
+        self.relevant_items_mask = np.logical_or.reduce(relevant_items_mask)
 
-        return self.relevant_items
+        if return_ids:
+            relevant_sets = [set(row) for row in relevant_items_per_users]
+            relevant_items_ids = set().union(*relevant_sets)
+            relevant_items_ids = np.array(list(relevant_items_ids))
+            return self.relevant_items_mask, relevant_items_ids
+        else:
+            return self.relevant_items_mask
 
     
     
