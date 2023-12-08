@@ -59,7 +59,7 @@ class LinearCombination(BaseRecommender):
 
         for i in range(scores_batch_array.shape[0]):
 
-            normalized_scores_rec_i = np.array([scaler.fit_transform(scores_batch_array[i][j,:].reshape(-1,1)).flatten() for j in scores_batch_array[i].shape[0]])
+            normalized_scores_rec_i = np.array([scaler.fit_transform(scores_batch_array[i][j,:].reshape(-1,1)).flatten() for j in range(scores_batch_array[i].shape[0])])
             scores_batch_array[i] = normalized_scores_rec_i
         
         # Now compute the ensamble scores by calculating a weighted average over the scores of each Recommender
