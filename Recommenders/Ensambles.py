@@ -58,10 +58,9 @@ class LinearCombination(BaseRecommender):
         scaler = MinMaxScaler(feature_range=(-1, 1))
 
         for i in range(scores_batch_array.shape[0]):
-            row = scores_batch_array[i, :]
-            row = row.reshape(-1, 1)  # Reshape to (n_samples, 1) as fit_transform expects 2D input
-            normalized_row = scaler.fit_transform(row).flatten()
-            scores_batch_array[i, :] = normalized_row
+
+            normalized_scores_rec_i = np.array([scaler.fit_transform(scores_batch_array[i][j,:].reshape(-1,1)).flatten() for j in scores_batch_array[i].shape[0]])
+            scores_batch_array[i] = normalized_scores_rec_i
         
         # Now compute the ensamble scores by calculating a weighted average over the scores of each Recommender
         scores_batch = np.average(scores_batch_array, axis= 0, weights= self.weights_list)
