@@ -38,6 +38,8 @@ class BaseRecommender(object):
         self.manage_cold_items = False
         self.manage_cold_users = False
 
+        self.merge_topPop = False
+
 
         if self._cold_user_mask.any():
             self._print("URM Detected {} ({:4.1f}%) users with no interactions.".format(
