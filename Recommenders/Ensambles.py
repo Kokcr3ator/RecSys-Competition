@@ -634,7 +634,7 @@ class UserSpecific(LinearCombination):
 
         n_items = self.original_URM_train.shape[1]
 
-        ranking_list_array = np.zeros((n_users,cutoff))
+        ranking_list_array = np.zeros((n_users,cutoff), dtype = int)
 
         for i in range(len(self.recommenders_groups_list)):
             recommender_mask = (np.where(group_assignments == i, 1,0)).astype(bool)
@@ -648,7 +648,7 @@ class UserSpecific(LinearCombination):
                                                                         remove_top_pop_flag = remove_top_pop_flag,
                                                                         remove_custom_items_flag = remove_custom_items_flag,
                                                                         return_scores = False)
-                recommendations_array = np.array([np.array(recommendations) for recommendations in recommendations_lists])
+                recommendations_array = np.array([np.array(recommendations) for recommendations in recommendations_lists], dtype = int)
                 ranking_list_array[recommender_mask] = recommendations_array
 
         # Transform back to list of lists
