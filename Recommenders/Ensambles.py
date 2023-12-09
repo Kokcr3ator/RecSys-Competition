@@ -639,15 +639,17 @@ class UserSpecific(LinearCombination):
         for i in range(len(self.recommenders_groups_list)):
             recommender_mask = (np.where(group_assignments == i, 1,0)).astype(bool)
             user_id_array = np.array(user_id_array) # ensure user_id_array is a np.array
-            recommendations_lists = self.recommenders_groups_list[i].recommend(user_id_array[recommender_mask],
+            user_id_array_group = user_id_array[recommender_mask]
+            if user_id_array_group.size > 0:
+                recommendations_lists = self.recommenders_groups_list[i].recommend(user_id_array_group,
                                                                         cutoff = cutoff,
                                                                         remove_seen_flag = remove_seen_flag,
                                                                         items_to_compute = items_to_compute,
                                                                         remove_top_pop_flag = remove_top_pop_flag,
                                                                         remove_custom_items_flag = remove_custom_items_flag,
                                                                         return_scores = False)
-            recommendations_array = np.array([np.array(recommendations) for recommendations in recommendations_lists])
-            ranking_list_array[recommender_mask] = recommendations_array
+                recommendations_array = np.array([np.array(recommendations) for recommendations in recommendations_lists])
+                ranking_list_array[recommender_mask] = recommendations_array
 
         # Transform back to list of lists
         ranking_list = ranking_list_array.tolist()
