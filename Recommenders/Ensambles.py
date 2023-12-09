@@ -646,6 +646,7 @@ class UserSpecific(LinearCombination):
 
         for i in range(len(self.recommenders_list)):
             recommender_mask = (np.where(group_assignments == i, 1,0)).astype(bool)
+            user_id_array = np.array(user_id_array)
             recommendations_lists = self.recommenders_list[i].recommend(user_id_array[recommender_mask].tolist(),
                                                                         cutoff = cutoff,
                                                                         remove_seen_flag = remove_seen_flag,
