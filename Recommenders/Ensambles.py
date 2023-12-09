@@ -516,7 +516,7 @@ class UserSpecific(LinearCombination):
 
     RECOMMENDER_NAME = "User_Specific_Ensamble_Recommender"
 
-    def __init__(self, URM_train, recommenders_list, hyperparameters_dicts_list, user_groups, weights_list= None, original_URM_train = None, verbose = True):
+    def __init__(self, URM_train, recommenders_list, hyperparameters_dicts_list, user_groups, weights_list_groups= None, original_URM_train = None, verbose = True):
         super(LinearCombination, self).__init__(URM_train, verbose = verbose)
 
         """ 
@@ -531,19 +531,20 @@ class UserSpecific(LinearCombination):
                 [(0,3),(3,6),(6,19)] -> 3 groups such that the first contains the first 20% of users in ascending order of number of interactions.
                 The second group will be the users from 20 to 35-percentile  in ascending order of number of interactions.
                 The last group contain the remaining users.
+
             
             OPTIONAL:
 
-            -weights_list: list of lists of weights in case using LinearCombination ensambles for some groups
+            -weights_list_groups: list of lists of weights in case using LinearCombination ensambles for some groups
             -original_URM_train: csr format User Rating Matrix in case of using preprocessed URM
             -verbose: boolean for verbosity
 
         """
 
 
-        self.recommenders_list = recommenders_list # list of initialized recommenders
-        self.hyperparameters_dicts_list = hyperparameters_dicts_list
-        self.weights_list = weights_list
+        self.recommenders_groups_list = recommenders_list # list of initialized recommenders
+        self.hyperparameters_dicts_groups_list = hyperparameters_dicts_list
+        self.weights_list_groups = weights_list_groups
 
 
         self.user_groups = user_groups
@@ -555,8 +556,9 @@ class UserSpecific(LinearCombination):
 
         
         profile_length = np.ediff1d(sps.csr_matrix(self.original_URM_train).indptr)
-        block_size = int(len(profile_length)*0.05)
-        sorted_users = np.argsort(profile_length)
+        block_size = int(len(profile_length)*0.05) # 5% of n_users
+        # Sort (ascending) and group users by number of interactions 
+        sorted_users = np.argsort(profile_length) 
         grouped_users = [sorted_users[group[0]*block_size : group[1]*block_size] for group in self.user_groups]
         # For the last group I actually need to put all the users until the last one
         grouped_users[-1] = sorted_users[self.user_groups[-1][0]*block_size : len(profile_length)]
@@ -565,27 +567,20 @@ class UserSpecific(LinearCombination):
 
           
 
-    def fit(self, merge_topPop= False, topPop_factor= 1e-6):
+    def fit(self):
 
         """
             Fit each of the Recommender provided by calling fit() method for each of them,
             also sets the weights list in case of an ensamble.
 
         """
-        self.merge_topPop = merge_topPop
 
-        # These parameters allow to utilize TopPopRecommender for filling in zero ratings, when you don't have enough
-        # recommendations
-        if self.merge_topPop:
-            self.topPop_factor = topPop_factor
-
-
-        for i in range(len(self.recommenders_list)):
+        for i in range(len(self.recommenders_groups_list)):
             hyperparams = self.hyperparameters_dicts_list[i]
-            self.recommenders_list[i].fit(**hyperparams)
-            print("Successfully fitted Recommender: ", self.recommenders_list[i].RECOMMENDER_NAME)
-            if self.recommenders_list[i] == "Linear_Combination_Ensamble_Recommender_Class" :
-                self.recommenders_list[i].set_weights_list(self.weights_list[i])
+            self.recommenders_groups_list[i].fit(**hyperparams)
+            print("Successfully fitted Recommender: ", self.recommenders_groups_list[i].RECOMMENDER_NAME)
+            if self.recommenders_groups_list[i].RECOMMENDER_NAME == "Linear_Combination_Ensamble_Recommender_Class" :
+                self.recommenders_groups_list[i].set_weights_list(self.weights_list_groups[i])
                 print("Successfully set weights for LinearCombination Recommender")
     
 
@@ -630,25 +625,22 @@ class UserSpecific(LinearCombination):
         if np.isscalar(user_id_array):
             user_id_array = np.atleast_1d(user_id_array)
             single_user = True
+            n_users = 1
         else:
             single_user = False
+            n_users = len(user_id_array)
         
         # Assign the group to each user
         group_assignments = np.array(self.assign_group_to_user_id_array(user_id_array))
 
-        if self.original_URM_train is not None:
-            n_items = self.original_URM_train.shape[1]
-        else:
-            n_items = self.URM_train.shape[1]
-        
-        n_users = len(user_id_array)
+        n_items = self.original_URM_train.shape[1]
 
         ranking_list_array = np.zeros((n_users,n_items))
 
-        for i in range(len(self.recommenders_list)):
+        for i in range(len(self.recommenders_groups_list)):
             recommender_mask = (np.where(group_assignments == i, 1,0)).astype(bool)
-            user_id_array = np.array(user_id_array)
-            recommendations_lists = self.recommenders_list[i].recommend(user_id_array[recommender_mask],
+            user_id_array = np.array(user_id_array) # ensure user_id_array is a np.array
+            recommendations_lists = self.recommenders_groups_list[i].recommend(user_id_array[recommender_mask],
                                                                         cutoff = cutoff,
                                                                         remove_seen_flag = remove_seen_flag,
                                                                         items_to_compute = items_to_compute,
@@ -676,7 +668,7 @@ class UserSpecific(LinearCombination):
 
         self._print("Saving model in file '{}'".format(folder_path + file_name))
         
-        for recommender_object in self.recommenders_list:
+        for recommender_object in self.recommenders_groups_list:
             recommender_object.save_model(folder_path = folder_path + "/" + self.RECOMMENDER_NAME)
 
         self._print("Saving complete")
@@ -689,7 +681,7 @@ class UserSpecific(LinearCombination):
 
         self._print("Loading model from file '{}'".format(folder_path + file_name))
 
-        for recommender_object in self.recommenders_list:
+        for recommender_object in self.recommenders_groups_list:
             recommender_object.load_model(folder_path = folder_path)
         
         self._print("Loading complete")
@@ -698,6 +690,6 @@ class UserSpecific(LinearCombination):
 
     def set_URM_train(self, URM_train):
         self.URM_train = URM_train
-        for recommender in self.recommenders_list:
+        for recommender in self.recommenders_groups_list:
             recommender.set_URM_train(URM_train)
         
