@@ -81,6 +81,7 @@ class LinearCombination(BaseRecommender):
         Compute the recommendations of the Ensamble
 
         '''
+        user_id_array = np.array(user_id_array)
         # If is a scalar transform it in a 1-cell array
         if np.isscalar(user_id_array):
             user_id_array = np.atleast_1d(user_id_array)
