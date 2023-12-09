@@ -541,7 +541,7 @@ class UserSpecific(LinearCombination):
         
         assert len(recommenders_list) != len(hyperparameters_dicts_list) != len(user_groups),\
         "recommenders_list, hyperparameters_dicts_list, weights_list and user_groups should all have the same length. Lengths provided: {}, {}, {}, {}".format(
-        len(recommenders_list), len(hyperparameters_dicts_list), len(weights_list), len(user_groups) )
+        len(recommenders_list), len(hyperparameters_dicts_list), len(user_groups) )
 
         self.recommenders_list = recommenders_list # list of initialized recommenders
         self.hyperparameters_dicts_list = hyperparameters_dicts_list
