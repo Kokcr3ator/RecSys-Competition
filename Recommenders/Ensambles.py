@@ -634,7 +634,7 @@ class UserSpecific(LinearCombination):
 
         n_items = self.original_URM_train.shape[1]
 
-        ranking_list_array = np.zeros((n_users,n_items))
+        ranking_list_array = np.zeros((n_users,cutoff))
 
         for i in range(len(self.recommenders_groups_list)):
             recommender_mask = (np.where(group_assignments == i, 1,0)).astype(bool)
