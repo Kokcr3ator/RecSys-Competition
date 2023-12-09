@@ -560,7 +560,7 @@ class UserSpecific(LinearCombination):
         # For the last group I actually need to put all the users until the last one
         grouped_users[-1] = sorted_users[self.user_groups[-1][0]*block_size : len(profile_length)]
         # Convert arrays to sets for faster membership checking
-        self.users_sets = [set(users) for users in self.grouped_users]
+        self.users_sets = [set(users) for users in grouped_users]
 
           
 
