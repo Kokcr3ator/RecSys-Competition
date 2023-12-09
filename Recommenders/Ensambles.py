@@ -566,7 +566,7 @@ class UserSpecific(LinearCombination):
 
           
 
-    def fit(self):
+    def fit(self, topPop_hyperp_list):
 
         """
             Fit each of the Recommender provided by calling fit() method for each of them,
@@ -575,12 +575,15 @@ class UserSpecific(LinearCombination):
         """
 
         for i in range(len(self.recommenders_groups_list)):
-            self.recommenders_groups_list[i].fit()
-            print("Successfully fitted Recommender: ", self.recommenders_groups_list[i].RECOMMENDER_NAME)
+            self.recommenders_groups_list[i].fit(**topPop_hyperp_list[i])
+            print("-------------------------------------------------------------------------")
+            print("Successfully fitted user-specific Recommender: ", i, "  (", self.recommenders_groups_list[i].RECOMMENDER_NAME,")")
+            
             if self.recommenders_groups_list[i].RECOMMENDER_NAME == "Linear_Combination_Ensamble_Recommender_Class" :
                 if len(self.recommenders_groups_list[i].get_models_list()) > 1:
                     self.recommenders_groups_list[i].set_weights_list(self.weights_list_groups[i])
                     print("Successfully set weights for LinearCombination Recommender")
+            print("-------------------------------------------------------------------------")
     
 
 
