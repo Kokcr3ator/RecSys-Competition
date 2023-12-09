@@ -516,7 +516,7 @@ class UserSpecific(LinearCombination):
 
     RECOMMENDER_NAME = "User_Specific_Ensamble_Recommender"
 
-    def __init__(self, URM_train, recommenders_list, hyperparameters_dicts_list, user_groups, weights_list_groups= None, original_URM_train = None, verbose = True):
+    def __init__(self, URM_train, recommenders_list, user_groups, weights_list_groups= None, original_URM_train = None, verbose = True):
         super(LinearCombination, self).__init__(URM_train, verbose = verbose)
 
         """ 
@@ -543,7 +543,6 @@ class UserSpecific(LinearCombination):
 
 
         self.recommenders_groups_list = recommenders_list # list of initialized recommenders
-        self.hyperparameters_dicts_groups_list = hyperparameters_dicts_list
         self.weights_list_groups = weights_list_groups
 
 
@@ -576,8 +575,7 @@ class UserSpecific(LinearCombination):
         """
 
         for i in range(len(self.recommenders_groups_list)):
-            hyperparams = self.hyperparameters_dicts_groups_list[i]
-            self.recommenders_groups_list[i].fit(**hyperparams)
+            self.recommenders_groups_list[i].fit()
             print("Successfully fitted Recommender: ", self.recommenders_groups_list[i].RECOMMENDER_NAME)
             if self.recommenders_groups_list[i].RECOMMENDER_NAME == "Linear_Combination_Ensamble_Recommender_Class" :
                 self.recommenders_groups_list[i].set_weights_list(self.weights_list_groups[i])
