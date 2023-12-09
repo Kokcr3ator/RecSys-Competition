@@ -578,8 +578,9 @@ class UserSpecific(LinearCombination):
             self.recommenders_groups_list[i].fit()
             print("Successfully fitted Recommender: ", self.recommenders_groups_list[i].RECOMMENDER_NAME)
             if self.recommenders_groups_list[i].RECOMMENDER_NAME == "Linear_Combination_Ensamble_Recommender_Class" :
-                self.recommenders_groups_list[i].set_weights_list(self.weights_list_groups[i])
-                print("Successfully set weights for LinearCombination Recommender")
+                if len(self.recommenders_groups_list[i].get_models_list()) > 1:
+                    self.recommenders_groups_list[i].set_weights_list(self.weights_list_groups[i])
+                    print("Successfully set weights for LinearCombination Recommender")
     
 
 
