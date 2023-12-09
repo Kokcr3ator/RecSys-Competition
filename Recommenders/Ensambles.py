@@ -544,8 +544,6 @@ class UserSpecific(LinearCombination):
         self.hyperparameters_dicts_list = hyperparameters_dicts_list
         self.weights_list = weights_list
 
-        assert user_groups[-1][1] != 19,\
-        "Last element of the last tuple in user_groups should be 19"
 
         self.user_groups = user_groups
 
