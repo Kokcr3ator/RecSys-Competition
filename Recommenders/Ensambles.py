@@ -576,7 +576,7 @@ class UserSpecific(LinearCombination):
         """
 
         for i in range(len(self.recommenders_groups_list)):
-            hyperparams = self.hyperparameters_dicts_list[i]
+            hyperparams = self.hyperparameters_dicts_groups_list[i]
             self.recommenders_groups_list[i].fit(**hyperparams)
             print("Successfully fitted Recommender: ", self.recommenders_groups_list[i].RECOMMENDER_NAME)
             if self.recommenders_groups_list[i].RECOMMENDER_NAME == "Linear_Combination_Ensamble_Recommender_Class" :
