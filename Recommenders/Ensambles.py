@@ -656,6 +656,15 @@ class UserSpecific(LinearCombination):
                                                                         return_scores = True)
                     scores_batch[recommender_mask] = scores
 
+                else:
+                    recommendations_lists = self.recommenders_groups_list[i].recommend(user_id_array_group,
+                                                                        cutoff = cutoff,
+                                                                        remove_seen_flag = remove_seen_flag,
+                                                                        items_to_compute = items_to_compute,
+                                                                        remove_top_pop_flag = remove_top_pop_flag,
+                                                                        remove_custom_items_flag = remove_custom_items_flag,
+                                                                        return_scores = False)
+
                 recommendations_array = np.array([np.array(recommendations) for recommendations in recommendations_lists], dtype = int)
                 ranking_list_array[recommender_mask] = recommendations_array
 
