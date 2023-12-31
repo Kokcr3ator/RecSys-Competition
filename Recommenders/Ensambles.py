@@ -758,7 +758,7 @@ class UserSpecific(LinearCombination):
         #                              if i not in self.groups_aggregation] # così non ci sono quelli non da aggregare...
 
         # Update boundaries with aggregated boundaries
-        self.boundaries = np.unique(aggregated_boundaries)
+        # self.boundaries = np.unique(aggregated_boundaries)
 
 
 
