@@ -754,11 +754,11 @@ class UserSpecific(LinearCombination):
 
         # TODO: check this!
         # Recompute aggregated boundaries
-        aggregated_boundaries = [np.max(self.boundaries[i-1:i+1]) for i in range(1, self.n_groups + 1)???
-                                     if i not in self.groups_aggregation] # così non ci sono quelli non da aggregare...
+        # aggregated_boundaries = [np.max(self.boundaries[i-1:i+1]) for i in range(1, self.n_groups + 1)???
+        #                              if i not in self.groups_aggregation] # così non ci sono quelli non da aggregare...
 
         # Update boundaries with aggregated boundaries
-        self.boundaries = np.unique(aggregated_boundaries)
+        # self.boundaries = np.unique(aggregated_boundaries)
 
 
 
