@@ -188,12 +188,13 @@ class LinearCombination(BaseRecommender):
 
             user_id = user_id_array[user_index]
 
-            if np.isin(user_id, hot_users_id_array):
-                if self.manage_cold_users:
+            if self.manage_cold_users:
+                if np.isin(user_id, hot_users_id_array):
                     user_id = OtP_user_mapping.loc[user_id]
 
-                if remove_seen_flag:
-                    scores_batch[user_index, :] = self._remove_seen_on_scores(user_id, scores_batch[user_index, :])
+                    if remove_seen_flag:
+                        scores_batch[user_index, :] = self._remove_seen_on_scores(user_id, scores_batch[user_index, :])
+                    
 
         if remove_top_pop_flag:
             scores_batch = self._remove_TopPop_on_scores(scores_batch)
@@ -517,7 +518,7 @@ class UserSpecific(LinearCombination):
 
     RECOMMENDER_NAME = "User_Specific_Ensamble_Recommender"
 
-    def __init__(self, URM_train, recommenders_list, user_groups, weights_list_groups= None, original_URM_train = None, verbose = True):
+    def __init__(self, URM_train, recommenders_list, groups_aggregation= None, weights_list_groups= None, original_URM_train = None, verbose = True):
         super(LinearCombination, self).__init__(URM_train, verbose = verbose)
 
         """ 
@@ -528,10 +529,9 @@ class UserSpecific(LinearCombination):
             -URM_train: csr format User Rating Matrix 
             -recommenders_list: list of recommenders, one for each group
             -hyperparameters_dicts_list: list of dictionaries for the hyperparameters of the recommender in each group
-            -user_groups: array of tuples [(a_0, a_1),(b_0, b_1),...] where each tuples consitutes a group, e.g:
-                [(0,3),(3,6),(6,19)] -> 3 groups such that the first contains the first 20% of users in ascending order of number of interactions.
-                The second group will be the users from 20 to 35-percentile  in ascending order of number of interactions.
-                The last group contain the remaining users.
+            -groups_aggregation: array of tuples [(a_0, ..., a_n),(b_0, ..., b_m),...] where each tuples consitutes a group, e.g:
+                [(0,1),(2,3,4),...] -> groups 0 and 1 should be fused into one, as well as for groups 2,3 and 4. The final idx for
+                the grouped groups is the lowest one, e.g. index 1 becomes index 0, as well as indices 3,4 become 2.
 
             
             OPTIONAL:
@@ -546,22 +546,45 @@ class UserSpecific(LinearCombination):
         self.recommenders_groups_list = recommenders_list # list of initialized recommenders
         self.weights_list_groups = weights_list_groups
 
-
-        self.user_groups = user_groups
+        self.n_groups = 20
+        self.groups_aggregation = groups_aggregation
 
         if original_URM_train is not None:
             self.original_URM_train = original_URM_train
         else:
             self.original_URM_train = self.URM_train
 
-        
-        profile_length = np.ediff1d(sps.csr_matrix(self.original_URM_train).indptr)
-        block_size = int(len(profile_length)*0.05) # 5% of n_users
-        # Sort (ascending) and group users by number of interactions 
-        sorted_users = np.argsort(profile_length) 
-        grouped_users = [sorted_users[group[0]*block_size : group[1]*block_size] for group in self.user_groups]
-        # For the last group I actually need to put all the users until the last one
-        grouped_users[-1] = sorted_users[self.user_groups[-1][0]*block_size : len(profile_length)]
+        # TODO: divide this into 2 functions, compute boundaries(to be called if boundaries is None)
+        # and assign_groups (to each )
+        user_activity = np.ediff1d(sps.csr_matrix(self.original_URM_train).indptr)
+        user_activity = np.sort(user_activity)
+
+        # Calculate percentiles to determine group boundaries
+        percentiles = np.linspace(0, 100, self.n_groups + 2)
+        percentile_values = np.percentile(user_activity, percentiles)
+
+        # Add a small offset to ensure unique boundaries
+        offset = 1e-10
+        self.boundaries = np.unique(np.round(percentile_values + offset).astype(int))
+        self.boundaries[-1] = self.boundaries[-1] + 1 #  last item won't be alone in the last group
+
+        # Assign each user to a group based on the boundaries
+        user_groups = np.digitize(user_activity, self.boundaries)
+
+        if self.groups_aggregation is not None:
+            self.aggregate_groups(user_groups, groups_aggregation)
+
+        # Create a list of arrays where each array contains the user IDs for a specific group
+        grouped_users = [np.where(user_groups == i)[0] for i in range(1, self.n_groups + 1)]
+                
+        # profile_length = np.ediff1d(sps.csr_matrix(self.original_URM_train).indptr)
+        # block_size = int(len(profile_length)*0.05) # 5% of n_users
+        # # Sort (ascending) and group users by number of interactions 
+        # sorted_users = np.argsort(profile_length) 
+        # grouped_users = [sorted_users[group[0]*block_size : group[1]*block_size] for group in self.user_groups]
+        # # For the last group I actually need to put all the users until the last one
+        # grouped_users[-1] = sorted_users[self.user_groups[-1][0]*block_size : len(profile_length)]
+
         # Convert arrays to sets for faster membership checking
         self.users_sets = [set(users) for users in grouped_users]
 
@@ -715,4 +738,34 @@ class UserSpecific(LinearCombination):
         self.URM_train = URM_train
         for recommender in self.recommenders_groups_list:
             recommender.set_URM_train(URM_train)
-        
+
+
+
+    def aggregate_groups(self, user_groups, groups_aggregation):
+        '''Apply group aggregation based on external groups_aggregation'''
+        for group_indices_to_aggregate in groups_aggregation:
+            # Make sure indices are valid
+            valid_indices = [idx for idx in group_indices_to_aggregate if 1 <= idx <= self.n_groups]
+
+            # Assign all users in the aggregated groups to the first group
+            first_group_idx = valid_indices[0]
+            for idx in valid_indices[1:]:
+                user_groups[user_groups == idx] = first_group_idx
+
+        # TODO: check this!
+        # Recompute aggregated boundaries
+        aggregated_boundaries = [np.max(self.boundaries[i-1:i+1]) for i in range(1, self.n_groups + 1)???
+                                     if i not in self.groups_aggregation] # così non ci sono quelli non da aggregare...
+
+        # Update boundaries with aggregated boundaries
+        self.boundaries = np.unique(aggregated_boundaries)
+
+
+
+    def get_group_ranges(self):
+        return self.boundaries
+
+
+    def set_group_ranges(self, boundaries):
+        self.boundaries = boundaries
+
