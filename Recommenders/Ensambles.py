@@ -287,6 +287,9 @@ class LinearCombination(BaseRecommender):
       
       
 
+    def get_weights_list(self):
+        return self.weights_list
+    
     def set_weights_list(self, weights_list):
         self.weights_list = weights_list
         
