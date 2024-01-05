@@ -148,3 +148,71 @@ def split_train_in_two_percentage_global_sample(URM_all, train_percentage = 0.1)
 
 
 
+def split_train_in_two_percentage_global_sample_kFold(URM_all, n_folds = 1, train_percentage = 0.1):
+    """
+    The function splits an URM in two matrices selecting the number of interactions globally
+    :param URM_all:
+    :param train_percentage:
+    :param verbose:
+    :return:
+    """
+
+    assert train_percentage >= 0.0 and train_percentage<=1.0, "train_percentage must be a value between 0.0 and 1.0, provided was '{}'".format(train_percentage)
+
+
+    from Data_manager.IncrementalSparseMatrix import IncrementalSparseMatrix
+
+    num_users, num_items = URM_all.shape
+
+    URM_train_builder = IncrementalSparseMatrix(n_rows=num_users, n_cols=num_items, auto_create_col_mapper=False, auto_create_row_mapper=False)
+    URM_validation_builder = IncrementalSparseMatrix(n_rows=num_users, n_cols=num_items, auto_create_col_mapper=False, auto_create_row_mapper=False)
+
+
+    URM_train = sps.coo_matrix(URM_all)
+
+    indices_for_sampling = np.arange(0, URM_all.nnz, dtype=np.int)
+    np.random.shuffle(indices_for_sampling)
+
+    n_train_interactions = round(URM_all.nnz * train_percentage)
+    n_validation_interactions = URM_all.nnz - n_train_interactions
+
+    train_val_sets_list = []
+
+    for fold in range(n_folds):
+        validation_range = np.arange(fold * n_validation_interactions, (fold + 1) * n_validation_interactions)
+        validation_mask = np.array([False] * URM_all.nnz) 
+        validation_mask[validation_range] = True
+        train_mask = np.logical_not(validation_mask)
+
+    
+        indices_for_train = indices_for_sampling[indices_for_sampling[train_mask]]
+        indices_for_validation = indices_for_sampling[indices_for_sampling[validation_mask]]
+
+
+        URM_train_builder.add_data_lists(URM_train.row[indices_for_train],
+                                        URM_train.col[indices_for_train],
+                                        URM_train.data[indices_for_train])
+
+        URM_validation_builder.add_data_lists(URM_train.row[indices_for_validation],
+                                            URM_train.col[indices_for_validation],
+                                            URM_train.data[indices_for_validation])
+
+
+        URM_train = URM_train_builder.get_SparseMatrix()
+        URM_validation = URM_validation_builder.get_SparseMatrix()
+
+        URM_train = sps.csr_matrix(URM_train)
+        URM_validation = sps.csr_matrix(URM_validation)
+
+        user_no_item_train = np.sum(np.ediff1d(URM_train.indptr) == 0)
+        user_no_item_validation = np.sum(np.ediff1d(URM_validation.indptr) == 0)
+
+        if user_no_item_train != 0:
+            print("Warning in train set of {} fold: {} ({:.2f} %) of {} users have no train items".format(fold, user_no_item_train, user_no_item_train/num_users*100, num_users))
+        if user_no_item_validation != 0:
+            print("Warning in validation set of {} fold: {} ({:.2f} %) of {} users have no sampled items".format(fold, user_no_item_validation, user_no_item_validation/num_users*100, num_users))
+
+        train_val_sets_list.append(URM_train)
+        train_val_sets_list.append(URM_validation)
+
+    return train_val_sets_list
