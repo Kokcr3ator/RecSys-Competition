@@ -582,8 +582,7 @@ class UserSpecific(LinearCombination):
             self.aggregate_groups(user_groups, groups_aggregation)
 
         # Create a list of arrays where each array contains the user IDs for a specific group
-        grouped_users = [np.where(user_groups == i)[0] if np.any(user_groups == i) else [] for i in range(1, self.n_groups + 1)]
-        grouped_users = [users for users in grouped_users if users] #remove empty lists
+        grouped_users = [np.where(user_groups == i)[0] for i in range(1, self.n_groups + 1) if np.any(user_groups == i)]
 
         # Convert arrays to sets for faster membership checking
         self.users_sets = [set(users) for users in grouped_users]
