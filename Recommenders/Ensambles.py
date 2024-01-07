@@ -573,6 +573,7 @@ class UserSpecific(LinearCombination):
         
         else: 
             self.boundaries = boundaries
+            self.n_groups = len(boundaries)
 
         # Assign each user to a group based on the boundaries
         user_groups = np.digitize(user_activity, self.boundaries)
@@ -756,7 +757,9 @@ class UserSpecific(LinearCombination):
 
             # Recompute aggregated boundaries
             last_group = group_indices_to_aggregate[-1]
-            aggregated_boundaries.append(self.boundaries[last_group])
+            if last_group == len(self.boundaries):
+                aggregated_boundaries.append(self.boundaries[-1])
+            else: aggregated_boundaries.append(self.boundaries[last_group])
 
         # Update boundaries with aggregated boundaries
         self.boundaries = np.array(aggregated_boundaries)
