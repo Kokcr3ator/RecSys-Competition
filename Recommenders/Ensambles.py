@@ -521,7 +521,7 @@ class UserSpecific(LinearCombination):
 
     RECOMMENDER_NAME = "User_Specific_Ensamble_Recommender"
 
-    def __init__(self, URM_train, recommenders_list, groups_aggregation= None, weights_list_groups= None, original_URM_train = None, verbose = True):
+    def __init__(self, URM_train, recommenders_list, groups_aggregation= None, weights_list_groups= None, boundaries= None, original_URM_train = None, verbose = True):
         super(LinearCombination, self).__init__(URM_train, verbose = verbose)
 
         """ 
@@ -557,19 +557,22 @@ class UserSpecific(LinearCombination):
         else:
             self.original_URM_train = self.URM_train
 
-        # TODO: divide this into 2 functions, compute boundaries(to be called if boundaries is None)
-        # and assign_groups (to each )
-        user_activity = np.ediff1d(sps.csr_matrix(self.original_URM_train).indptr)
-        user_activity = np.sort(user_activity)
+        # Compute boundaries(to be called if boundaries is None)
+        if boundaries is None:
+            user_activity = np.ediff1d(sps.csr_matrix(self.original_URM_train).indptr)
+            user_activity = np.sort(user_activity)
 
-        # Calculate percentiles to determine group boundaries
-        percentiles = np.linspace(0, 100, self.n_groups + 2)
-        percentile_values = np.percentile(user_activity, percentiles)
+            # Calculate percentiles to determine group boundaries
+            percentiles = np.linspace(0, 100, self.n_groups + 1)
+            percentile_values = np.percentile(user_activity, percentiles)
 
-        # Add a small offset to ensure unique boundaries
-        offset = 1e-10
-        self.boundaries = np.unique(np.round(percentile_values + offset).astype(int))
-        self.boundaries[-1] = self.boundaries[-1] + 1 #  last item won't be alone in the last group
+            # Add a small offset to ensure unique boundaries
+            offset = 1e-10
+            self.boundaries = np.unique(np.round(percentile_values + offset).astype(int))
+            self.boundaries[-1] = self.boundaries[-1] + 1 #  last item won't be alone in the last group
+        
+        else: 
+            self.boundaries = boundaries
 
         # Assign each user to a group based on the boundaries
         user_groups = np.digitize(user_activity, self.boundaries)
@@ -578,15 +581,8 @@ class UserSpecific(LinearCombination):
             self.aggregate_groups(user_groups, groups_aggregation)
 
         # Create a list of arrays where each array contains the user IDs for a specific group
-        grouped_users = [np.where(user_groups == i)[0] for i in range(1, self.n_groups + 1)]
-                
-        # profile_length = np.ediff1d(sps.csr_matrix(self.original_URM_train).indptr)
-        # block_size = int(len(profile_length)*0.05) # 5% of n_users
-        # # Sort (ascending) and group users by number of interactions 
-        # sorted_users = np.argsort(profile_length) 
-        # grouped_users = [sorted_users[group[0]*block_size : group[1]*block_size] for group in self.user_groups]
-        # # For the last group I actually need to put all the users until the last one
-        # grouped_users[-1] = sorted_users[self.user_groups[-1][0]*block_size : len(profile_length)]
+        grouped_users = [np.where(user_groups == i)[0] if np.any(user_groups == i) else [] for i in range(1, self.n_groups + 1)]
+        grouped_users = [users for users in grouped_users if users] #remove empty lists
 
         # Convert arrays to sets for faster membership checking
         self.users_sets = [set(users) for users in grouped_users]
@@ -746,22 +742,24 @@ class UserSpecific(LinearCombination):
 
     def aggregate_groups(self, user_groups, groups_aggregation):
         '''Apply group aggregation based on external groups_aggregation'''
+        
+        aggregated_boundaries = [self.boundaries[0]]
+
         for group_indices_to_aggregate in groups_aggregation:
             # Make sure indices are valid
             valid_indices = [idx for idx in group_indices_to_aggregate if 1 <= idx <= self.n_groups]
 
-            # Assign all users in the aggregated groups to the first group
+            # Assign all users in the aggregated groups to the first aggregated group
             first_group_idx = valid_indices[0]
             for idx in valid_indices[1:]:
                 user_groups[user_groups == idx] = first_group_idx
 
-        # TODO: check this!
-        # Recompute aggregated boundaries
-        # aggregated_boundaries = [np.max(self.boundaries[i-1:i+1]) for i in range(1, self.n_groups + 1)???
-        #                              if i not in self.groups_aggregation] # così non ci sono quelli non da aggregare...
+            # Recompute aggregated boundaries
+            last_group = group_indices_to_aggregate[-1]
+            aggregated_boundaries.append(self.boundaries[last_group])
 
         # Update boundaries with aggregated boundaries
-        # self.boundaries = np.unique(aggregated_boundaries)
+        self.boundaries = np.array(aggregated_boundaries)
 
 
 
