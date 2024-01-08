@@ -686,6 +686,7 @@ class UserSpecific(LinearCombination):
                                                                         remove_top_pop_flag = remove_top_pop_flag,
                                                                         remove_custom_items_flag = remove_custom_items_flag,
                                                                         return_scores = True)
+                    print("Shape of scores:", scores.shape)
                     scores_array = np.array([np.array(score) for score in scores])
                     scores_batch[recommender_mask] = scores_array
 
