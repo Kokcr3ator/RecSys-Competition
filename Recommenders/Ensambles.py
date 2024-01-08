@@ -673,6 +673,11 @@ class UserSpecific(LinearCombination):
         ranking_list_array = np.zeros((n_users,cutoff), dtype = int) 
         scores_batch = np.zeros((n_users, self.n_items))
 
+        print("Scores_batch shape:", scores_batch.shape)
+
+        # if self.manage_cold_items:
+        #     group_assignments = [-1] * self.n_items
+
         for i in range(self.n_groups):
             recommender_mask = (np.where(self.group_assignments[user_id_array] == i, 1,0)).astype(bool)
             user_id_array_group = user_id_array[recommender_mask]
