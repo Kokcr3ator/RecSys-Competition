@@ -573,7 +573,7 @@ class UserSpecific(LinearCombination):
         
         else: 
             self.boundaries = boundaries
-            self.n_groups = len(boundaries)
+
 
         # Assign each user to a group based on the boundaries
         user_groups = np.digitize(user_activity, self.boundaries)
@@ -581,10 +581,18 @@ class UserSpecific(LinearCombination):
         if self.groups_aggregation is not None:
             self.aggregate_groups(user_groups, groups_aggregation)
 
-        # Create a list of arrays where each array contains the user IDs for a specific group
-        grouped_users = [np.where(user_groups == i)[0] for i in range(1, self.n_groups + 1) if np.any(user_groups == i)]
+        # Rescale groups as 0,1,2,...
+        unique_groups = np.unique(user_groups)
+        value_to_index = {value: index for index, value in enumerate(unique_groups)}
+        user_groups = np.array([value_to_index[value] for value in user_groups])
+        self.group_assignments = user_groups
+        self.n_groups = len(unique_groups)
+        print("Resulting groups are", self.n_groups, ": check number of recommeders provided is consistent.")
 
-        # Convert arrays to sets for faster membership checking
+        # Create a list of arrays where each array contains the user IDs for a specific group
+        grouped_users = [np.where(user_groups == i)[0] for i in range(0, self.n_groups) if np.any(user_groups == i)]
+
+        # Convert arrays to sets for faster membership checking (list of sets)
         self.users_sets = [set(users) for users in grouped_users]
 
           
@@ -617,7 +625,7 @@ class UserSpecific(LinearCombination):
         in the sets (cold_users) it will return group 0 (least interactions group)
 
         """
-        for index, array_set in enumerate(self.users_sets):
+        for index, array_set in enumerate(self.users_sets): # usersets is a list of sets
             if user in array_set:
                 return index
         
@@ -627,9 +635,8 @@ class UserSpecific(LinearCombination):
     def assign_group_to_user_id_array(self, user_id_array):
 
         # Use multiprocessing to parallelize computations
-
         with Pool() as pool:
-            group_assignments = pool.map(self.find_group, user_id_array)
+            group_assignments = pool.map(self.find_group, user_id_array) # list of group for each user
 
         return group_assignments
 
@@ -656,17 +663,18 @@ class UserSpecific(LinearCombination):
             n_users = len(user_id_array)
         
         # Assign the group to each user
-        group_assignments = np.array(self.assign_group_to_user_id_array(user_id_array))
+        #group_assignments = np.array(self.assign_group_to_user_id_array(user_id_array))
+        user_id_array = np.array(user_id_array) # ensure user_id_array is a np.array
 
-        n_items = self.original_URM_train.shape[1]
+        # n_items = self.original_URM_train.shape[1]
 
-        ranking_list_array = np.zeros((n_users,cutoff), dtype = int)
-        scores_batch = np.zeros((n_users,cutoff))
+        ranking_list_array = np.zeros((n_users,cutoff), dtype = int) #???
+        scores_batch = np.zeros((n_users, self.n_items))
 
-        for i in range(len(self.recommenders_groups_list)):
-            recommender_mask = (np.where(group_assignments == i, 1,0)).astype(bool)
-            user_id_array = np.array(user_id_array) # ensure user_id_array is a np.array
+        for i in range(self.n_groups):
+            recommender_mask = (np.where(self.group_assignments == i, 1,0)).astype(bool)
             user_id_array_group = user_id_array[recommender_mask]
+
             if user_id_array_group.size > 0:
                 if return_scores:
                     recommendations_lists, scores = self.recommenders_groups_list[i].recommend(user_id_array_group,
@@ -676,7 +684,8 @@ class UserSpecific(LinearCombination):
                                                                         remove_top_pop_flag = remove_top_pop_flag,
                                                                         remove_custom_items_flag = remove_custom_items_flag,
                                                                         return_scores = True)
-                    scores_batch[recommender_mask] = scores
+                    scores_array = np.array([np.array(score) for score in scores])
+                    scores_batch[recommender_mask] = scores_array
 
                 else:
                     recommendations_lists = self.recommenders_groups_list[i].recommend(user_id_array_group,
