@@ -570,7 +570,7 @@ class UserSpecific(LinearCombination):
             # Add a small offset to ensure unique boundaries
             offset = 1e-10
             self.boundaries = np.unique(np.round(percentile_values + offset).astype(int))
-            self.boundaries[-1] = self.boundaries[-1] + 1 #  last item won't be alone in the last group
+            self.boundaries[-1] = np.inf #  last item won't be alone in the last group
         
         else: 
             self.boundaries = boundaries
