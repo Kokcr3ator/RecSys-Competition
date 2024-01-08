@@ -565,6 +565,7 @@ class UserSpecific(LinearCombination):
             # Calculate percentiles to determine group boundaries
             percentiles = np.linspace(0, 100, self.n_groups + 1)
             percentile_values = np.percentile(user_activity, percentiles)
+            print("Percentiles ranges are:\n", percentile_values)
 
             # Add a small offset to ensure unique boundaries
             offset = 1e-10
@@ -577,6 +578,7 @@ class UserSpecific(LinearCombination):
 
         # Assign each user to a group based on the boundaries
         user_groups = np.digitize(user_activity, self.boundaries)
+        print("Groups ranges before aggregation are:\n", boundaries)
 
         if self.groups_aggregation is not None:
             self.aggregate_groups(user_groups, groups_aggregation)
