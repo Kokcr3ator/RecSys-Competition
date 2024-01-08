@@ -578,7 +578,7 @@ class UserSpecific(LinearCombination):
 
         # Assign each user to a group based on the boundaries
         user_groups = np.digitize(user_activity, self.boundaries)
-        print("Groups ranges before aggregation are:\n", boundaries)
+        print("Groups ranges before aggregation are:\n", self.boundaries)
 
         if self.groups_aggregation is not None:
             self.aggregate_groups(user_groups, groups_aggregation)
