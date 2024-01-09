@@ -784,3 +784,210 @@ class UserSpecific(LinearCombination):
     def set_group_ranges(self, boundaries):
         self.boundaries = boundaries
 
+
+
+class Old_UserSpecific(LinearCombination):
+    """User Specific Ensamble Recommender"""
+
+    RECOMMENDER_NAME = "User_Specific_Ensamble_Recommender"
+
+    def __init__(self, URM_train, recommenders_list, user_groups, weights_list_groups= None, original_URM_train = None, verbose = True):
+        super(LinearCombination, self).__init__(URM_train, verbose = verbose)
+
+        """ 
+        PARAMETERS:
+
+            MANDATORY:
+
+            -URM_train: csr format User Rating Matrix 
+            -recommenders_list: list of recommenders, one for each group
+            -hyperparameters_dicts_list: list of dictionaries for the hyperparameters of the recommender in each group
+            -user_groups: array of tuples [(a_0, a_1),(b_0, b_1),...] where each tuples consitutes a group, e.g:
+                [(0,3),(3,6),(6,19)] -> 3 groups such that the first contains the first 20% of users in ascending order of number of interactions.
+                The second group will be the users from 20 to 35-percentile  in ascending order of number of interactions.
+                The last group contain the remaining users.
+
+            
+            OPTIONAL:
+
+            -weights_list_groups: list of lists of weights in case using LinearCombination ensambles for some groups
+            -original_URM_train: csr format User Rating Matrix in case of using preprocessed URM
+            -verbose: boolean for verbosity
+
+        """
+
+
+        self.recommenders_groups_list = recommenders_list # list of initialized recommenders
+        self.weights_list_groups = weights_list_groups
+
+
+        self.user_groups = user_groups
+
+        if original_URM_train is not None:
+            self.original_URM_train = original_URM_train
+        else:
+            self.original_URM_train = self.URM_train
+
+        
+        profile_length = np.ediff1d(sps.csr_matrix(self.original_URM_train).indptr)
+        block_size = int(len(profile_length)*0.05) # 5% of n_users
+        # Sort (ascending) and group users by number of interactions 
+        sorted_users = np.argsort(profile_length) 
+        grouped_users = [sorted_users[group[0]*block_size : group[1]*block_size] for group in self.user_groups]
+        # For the last group I actually need to put all the users until the last one
+        grouped_users[-1] = sorted_users[self.user_groups[-1][0]*block_size : len(profile_length)]
+        # Convert arrays to sets for faster membership checking
+        self.users_sets = [set(users) for users in grouped_users]
+
+          
+
+    def fit(self, topPop_hyperp_list):
+
+        """
+            Fit each of the Recommender provided by calling fit() method for each of them,
+            also sets the weights list in case of an ensamble.
+
+        """
+
+        for i in range(len(self.recommenders_groups_list)):
+            self.recommenders_groups_list[i].fit(**topPop_hyperp_list[i])
+            print("-------------------------------------------------------------------------")
+            print("Successfully fitted user-specific Recommender: ", i, "  (", self.recommenders_groups_list[i].RECOMMENDER_NAME,")")
+            
+            if self.recommenders_groups_list[i].RECOMMENDER_NAME == "Linear_Combination_Ensamble_Recommender_Class" :
+                if len(self.recommenders_groups_list[i].get_models_list()) > 1:
+                    self.recommenders_groups_list[i].set_weights_list(self.weights_list_groups[i])
+                    print("Successfully set weights for LinearCombination Recommender")
+            print("-------------------------------------------------------------------------")
+    
+
+
+    def find_group(self, user):
+
+        """ 
+        Given a users returns the group he belongs to, in case a user is not present 
+        in the sets (cold_users) it will return group 0 (least interactions group)
+
+        """
+        for index, array_set in enumerate(self.users_sets):
+            if user in array_set:
+                return index
+        
+        return 0  
+            
+
+    def assign_group_to_user_id_array(self, user_id_array):
+
+        # Use multiprocessing to parallelize computations
+
+        with Pool() as pool:
+            group_assignments = pool.map(self.find_group, user_id_array)
+
+        return group_assignments
+
+                
+    def _compute_item_score(self, user_id_array, items_to_compute = None):
+
+        raise NotImplementedError("compute_item_score has not been implemented.")
+
+            
+    
+    def recommend(self, user_id_array, cutoff = None, remove_seen_flag=True, items_to_compute = None,
+                  remove_top_pop_flag = False, remove_custom_items_flag = False, return_scores = False):
+        '''
+        Compute the recommendations of the Ensamble
+
+        '''
+
+        if np.isscalar(user_id_array):
+            user_id_array = np.atleast_1d(user_id_array)
+            single_user = True
+            n_users = 1
+        else:
+            single_user = False
+            n_users = len(user_id_array)
+        
+        # Assign the group to each user
+        group_assignments = np.array(self.assign_group_to_user_id_array(user_id_array))
+
+        n_items = self.original_URM_train.shape[1]
+
+        ranking_list_array = np.zeros((n_users,cutoff), dtype = int)
+        scores_batch = np.zeros((n_users,cutoff))
+
+        for i in range(len(self.recommenders_groups_list)):
+            recommender_mask = (np.where(group_assignments == i, 1,0)).astype(bool)
+            user_id_array = np.array(user_id_array) # ensure user_id_array is a np.array
+            user_id_array_group = user_id_array[recommender_mask]
+            if user_id_array_group.size > 0:
+                if return_scores:
+                    recommendations_lists, scores = self.recommenders_groups_list[i].recommend(user_id_array_group,
+                                                                        cutoff = cutoff,
+                                                                        remove_seen_flag = remove_seen_flag,
+                                                                        items_to_compute = items_to_compute,
+                                                                        remove_top_pop_flag = remove_top_pop_flag,
+                                                                        remove_custom_items_flag = remove_custom_items_flag,
+                                                                        return_scores = True)
+                    scores = np.array([scores[i][recommendations_lists[i]] for i in range(len(recommendations_lists))])
+                    scores_batch[recommender_mask] = scores
+
+                else:
+                    recommendations_lists = self.recommenders_groups_list[i].recommend(user_id_array_group,
+                                                                        cutoff = cutoff,
+                                                                        remove_seen_flag = remove_seen_flag,
+                                                                        items_to_compute = items_to_compute,
+                                                                        remove_top_pop_flag = remove_top_pop_flag,
+                                                                        remove_custom_items_flag = remove_custom_items_flag,
+                                                                        return_scores = False)
+
+                recommendations_array = np.array([np.array(recommendations) for recommendations in recommendations_lists], dtype = int)
+                ranking_list_array[recommender_mask] = recommendations_array
+
+        # Transform back to list of lists
+        ranking_list = ranking_list_array.tolist()
+
+        # Return single list for one user, instead of list of lists
+        if single_user:
+            ranking_list = ranking_list[0]
+
+
+        if return_scores:
+            return ranking_list, scores_batch
+
+        else:
+            return ranking_list
+            
+            
+    
+    def save_model(self, folder_path, file_name = None):
+
+        if file_name is None:
+            file_name = self.RECOMMENDER_NAME
+
+        self._print("Saving model in file '{}'".format(folder_path + file_name))
+        
+        for recommender_object in self.recommenders_groups_list:
+            recommender_object.save_model(folder_path = folder_path + "/" + self.RECOMMENDER_NAME)
+
+        self._print("Saving complete")
+        
+    
+    def load_model(self, folder_path, file_name = None):
+
+        if file_name is None:
+            file_name = self.RECOMMENDER_NAME
+
+        self._print("Loading model from file '{}'".format(folder_path + file_name))
+
+        for recommender_object in self.recommenders_groups_list:
+            recommender_object.load_model(folder_path = folder_path)
+        
+        self._print("Loading complete")
+            
+
+
+    def set_URM_train(self, URM_train):
+        self.URM_train = URM_train
+        for recommender in self.recommenders_groups_list:
+            recommender.set_URM_train(URM_train)
+
