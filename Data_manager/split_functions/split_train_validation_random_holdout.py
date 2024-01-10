@@ -165,14 +165,15 @@ def split_train_in_two_percentage_global_sample_kFold(URM_all, n_folds = 1, trai
     num_users, num_items = URM_all.shape
 
     URM_all = sps.coo_matrix(URM_all)
+    n_interactions = URM_all.nnz
 
-    indices_for_sampling = np.arange(0, URM_all.nnz, dtype=np.int)
+    indices_for_sampling = np.arange(0, n_interactions, dtype=np.int)
     np.random.shuffle(indices_for_sampling)
 
-    print("URM_all contains", URM_all.nnz, "interactions.")
+    print("URM_all contains", n_interactions, "interactions.")
 
-    n_train_interactions = round(URM_all.nnz * train_percentage)
-    n_validation_interactions = URM_all.nnz - n_train_interactions
+    n_train_interactions = round(n_interactions * train_percentage)
+    n_validation_interactions = n_interactions - n_train_interactions
 
     print("There will be", n_train_interactions, "train interactions")
     print("and", n_validation_interactions, "validation interactions,")
@@ -180,11 +181,21 @@ def split_train_in_two_percentage_global_sample_kFold(URM_all, n_folds = 1, trai
     train_val_sets_list = []
 
     for fold in range(n_folds):
-        validation_range = np.arange(fold * n_validation_interactions, (fold + 1) * n_validation_interactions)
-        validation_mask = np.array([False] * URM_all.nnz) 
+        start_val = int((n_interactions / n_folds) * fold)
+        end_val = start_val + n_validation_interactions
+        if end_val >= n_interactions:
+            end_val = end_val % n_interactions
+            validation_range1 = np.arange(end_val)
+            validation_range2 = np.arange(start_val, n_interactions)
+            validation_range = np.concatenate((validation_range1, validation_range2))
+
+        else: 
+            validation_range = np.arange(start_val, end_val)
+
+        validation_mask = np.array([False] * n_interactions) 
         validation_mask[validation_range] = True
         train_mask = np.logical_not(validation_mask)
-    
+
         indices_for_train = indices_for_sampling[indices_for_sampling[train_mask]]
         indices_for_validation = indices_for_sampling[indices_for_sampling[validation_mask]]
 
