@@ -560,7 +560,6 @@ class UserSpecific(LinearCombination):
         # Compute boundaries(to be called if boundaries is None)
         if boundaries is None:
             user_activity = np.ediff1d(sps.csr_matrix(self.original_URM_train).indptr)
-            user_activity = np.sort(user_activity)
 
             # Calculate percentiles to determine group boundaries
             percentiles = np.linspace(0, 100, self.n_groups + 1)
