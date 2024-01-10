@@ -554,6 +554,7 @@ class UserSpecific(LinearCombination):
 
         if original_URM_train is not None:
             self.original_URM_train = original_URM_train
+            self.n_users, self.n_items = self.original_URM_train.shape
         else:
             self.original_URM_train = self.URM_train
 
